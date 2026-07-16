@@ -5,20 +5,22 @@ import { getInterventions, runSimulation } from '../services/api';
 export function useInterventions() {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetch = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await getInterventions();
       setInterventions(data);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  return { interventions, loading, fetch };
+  return { interventions, loading, error, fetch };
 }
 
 export function useSimulation() {
