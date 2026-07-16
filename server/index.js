@@ -9,7 +9,6 @@ import advisoryRouter from './routes/advisory.js';
 import citiesRouter from './routes/cities.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -28,6 +27,14 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
-  console.log(`UrbanBreathe API server running on port ${PORT}`);
-});
+// Export for Vercel serverless or start server directly
+export default app;
+
+// Only start listening when running directly (not imported as a module)
+const isVercel = process.env.VERCEL === '1';
+if (!isVercel) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`UrbanBreathe API server running on port ${PORT}`);
+  });
+}
