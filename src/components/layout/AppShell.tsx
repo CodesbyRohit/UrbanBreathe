@@ -8,6 +8,7 @@ import PredictiveIntelligence from '../forecast/PredictiveIntelligence';
 import PolicySimulator from '../simulator/PolicySimulator';
 import ExecutiveBrief from '../executive-brief/ExecutiveBrief';
 import CitizenAdvisory from '../citizen-advisory/CitizenAdvisory';
+import { Menu } from 'lucide-react';
 import type { AirQualityData } from '../../types';
 import type { NavSection } from '../../utils/constants';
 import { useCities, useAirQuality } from '../../hooks/useCityData';
@@ -16,6 +17,7 @@ export default function AppShell() {
   const { cities } = useCities();
   const [selectedCityId, setSelectedCityId] = useState<string>('delhi');
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const lastUpdatedRef = useRef<string | null>(null);
 
   const selectedCity = cities.find(c => c.id === selectedCityId) || null;
@@ -44,23 +46,43 @@ export default function AppShell() {
 
   return (
     <div className="flex h-screen bg-slate-50">
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+      {/* Skip-to-content link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium"
+      >
+        Skip to main content
+      </a>
+
+      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+
       <div className="flex-1 flex flex-col min-w-0">
-        <Header
-          city={selectedCity}
-          airQuality={airQuality}
-          loading={aqLoading}
-          onRefresh={handleRefresh}
-          lastUpdated={lastUpdatedRef.current}
-        />
-        <div className="flex-1 overflow-auto">
-          <div className="px-6 py-4 border-b border-slate-100 bg-white">
+        {/* Top bar: mobile hamburger + Header — div wrapper to avoid nested <header> */}
+        <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center gap-3">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            aria-label="Open navigation menu"
+          >
+            <Menu size={20} />
+          </button>
+          <Header
+            city={selectedCity}
+            airQuality={airQuality}
+            loading={aqLoading}
+            onRefresh={handleRefresh}
+            lastUpdated={lastUpdatedRef.current}
+          />
+        </div>
+
+        <main id="main-content" className="flex-1 overflow-auto">
+          <div className="px-4 md:px-6 py-4 border-b border-slate-100 bg-white">
             <CitySelector cities={cities} selectedId={selectedCityId} onSelect={setSelectedCityId} />
           </div>
-          <div className="px-6 pb-8 animate-fade-in">
+          <div className="px-4 md:px-6 pb-8 animate-fade-in">
             {renderSection()}
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

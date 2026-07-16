@@ -22,7 +22,7 @@ export async function fetchAirQuality(cityId, lat, lon) {
     const aqi = getOverallAQI(pm25 * 2, pm10 * 1.5, no2 * 3, o3 * 2);
     return { pm25, pm10, no2, o3, so2, co, aqi, source: 'open-meteo' };
   } catch (err) {
-    console.warn(`Open-Meteo AQ fetch failed for ${cityId}:`, err.message);
+    // Open-Meteo unavailable — will use fallback data
     return null;
   }
 }
@@ -46,7 +46,6 @@ export async function fetchWeather(lat, lon) {
       source: 'open-meteo',
     };
   } catch (err) {
-    console.warn(`Open-Meteo weather fetch failed:`, err.message);
     return null;
   }
 }
@@ -73,7 +72,6 @@ export async function fetchForecast(lat, lon) {
     }
     return { forecast, source: 'open-meteo' };
   } catch (err) {
-    console.warn(`Forecast fetch failed:`, err.message);
     return null;
   }
 }

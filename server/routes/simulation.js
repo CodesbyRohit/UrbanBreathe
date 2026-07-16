@@ -15,7 +15,8 @@ router.post('/run', (req, res) => {
       return res.status(400).json({ error: 'cityId and interventions required' });
     }
     const data = getFallbackData(cityId);
-    const cityData = { ...data, aqi: data.pm25 ? undefined : 150, cityId };
+    // Derive aqi from PM2.5 if not present in fallback data
+    const cityData = { ...data, aqi: data.aqi || Math.round((data.pm25 || 60) * 1.5), cityId };
     const result = runSimulation(cityData, interventions);
     res.json(result);
   } catch (err) {
