@@ -1,5 +1,5 @@
 import { getSeason } from './sourceAttribution.js';
-import { getOverallAQI, getAQIFromConcentration, getAQICategory } from '../utils/calculations.js';
+import { getAQICategory } from '../utils/calculations.js';
 
 export function generateForecast(currentData, cityId) {
   const season = getSeason();
@@ -15,7 +15,10 @@ export function generateForecast(currentData, cityId) {
 
   const sm = seasonalMultipliers[season] || seasonalMultipliers.summer;
 
-  const forecast = hours.map((h, i) => {
+  // Build forecast entries sequentially so each can reference the previous
+  const forecast = [];
+  for (let i = 0; i < hours.length; i++) {
+    const h = hours[i];
     const timeOfDay = (new Date().getHours() + h) % 24;
     const diurnalFactor = Math.sin((timeOfDay - 4) * Math.PI / 12) * sm.amplitude;
     const trendFactor = sm.trend * i;
@@ -34,9 +37,11 @@ export function generateForecast(currentData, cityId) {
     if (predictedAQI > 300) alerts.push('Health emergency — stay indoors');
     else if (predictedAQI > 200) alerts.push('Avoid prolonged outdoor exposure');
     if (predictedPM25 > 150) alerts.push('High PM2.5 — use air purifiers');
-    if (i > 0 && predictedAQI > forecast[i - 1]?.aqi + 30) alerts.push('Rapid deterioration expected');
+    if (i > 0 && predictedAQI > forecast[i - 1].aqi + 30) {
+      alerts.push('Rapid deterioration expected');
+    }
 
-    return {
+    forecast.push({
       hour: `+${h}h`,
       hoursFromNow: h,
       time: new Date(Date.now() + h * 3600000).toISOString(),
@@ -46,8 +51,8 @@ export function generateForecast(currentData, cityId) {
       color: category.color,
       confidence,
       alerts,
-    };
-  });
+    });
+  }
 
   const peak = forecast.reduce((max, f) => f.aqi > max.aqi ? f : max, forecast[0]);
   const trend = {
