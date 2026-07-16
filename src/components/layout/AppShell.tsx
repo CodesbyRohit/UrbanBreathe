@@ -1,17 +1,29 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import CitySelector from '../common/CitySelector';
-import LiveMonitoring from '../dashboard/LiveMonitoring';
-import SourceAttribution from '../source-attribution/SourceAttribution';
-import PredictiveIntelligence from '../forecast/PredictiveIntelligence';
-import PolicySimulator from '../simulator/PolicySimulator';
-import ExecutiveBrief from '../executive-brief/ExecutiveBrief';
-import CitizenAdvisory from '../citizen-advisory/CitizenAdvisory';
-import { Menu } from 'lucide-react';
-import type { AirQualityData } from '../../types';
+import { Menu, Loader } from 'lucide-react';
 import type { NavSection } from '../../utils/constants';
 import { useCities, useAirQuality } from '../../hooks/useCityData';
+
+// Lazy-loaded modules for code-splitting
+const LiveMonitoring = lazy(() => import('../dashboard/LiveMonitoring'));
+const SourceAttribution = lazy(() => import('../source-attribution/SourceAttribution'));
+const PredictiveIntelligence = lazy(() => import('../forecast/PredictiveIntelligence'));
+const PolicySimulator = lazy(() => import('../simulator/PolicySimulator'));
+const ExecutiveBrief = lazy(() => import('../executive-brief/ExecutiveBrief'));
+const CitizenAdvisory = lazy(() => import('../citizen-advisory/CitizenAdvisory'));
+
+function ModuleFallback() {
+  return (
+    <div className="flex items-center justify-center h-96">
+      <div className="flex items-center gap-2 text-sm text-slate-400">
+        <Loader size={16} className="animate-spin" />
+        Loading module...
+      </div>
+    </div>
+  );
+}
 
 export default function AppShell() {
   const { cities } = useCities();
@@ -33,15 +45,18 @@ export default function AppShell() {
   }, [refreshAQ]);
 
   const renderSection = () => {
-    switch (activeSection) {
-      case 'dashboard': return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
-      case 'sources': return <SourceAttribution cityId={selectedCityId} />;
-      case 'forecast': return <PredictiveIntelligence cityId={selectedCityId} />;
-      case 'simulator': return <PolicySimulator cityId={selectedCityId} />;
-      case 'brief': return <ExecutiveBrief cityId={selectedCityId} />;
-      case 'advisory': return <CitizenAdvisory cityId={selectedCityId} />;
-      default: return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
-    }
+    const section = (() => {
+      switch (activeSection) {
+        case 'dashboard': return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
+        case 'sources': return <SourceAttribution cityId={selectedCityId} />;
+        case 'forecast': return <PredictiveIntelligence cityId={selectedCityId} />;
+        case 'simulator': return <PolicySimulator cityId={selectedCityId} />;
+        case 'brief': return <ExecutiveBrief cityId={selectedCityId} />;
+        case 'advisory': return <CitizenAdvisory cityId={selectedCityId} />;
+        default: return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
+      }
+    })();
+    return <Suspense fallback={<ModuleFallback />}>{section}</Suspense>;
   };
 
   return (
@@ -57,8 +72,8 @@ export default function AppShell() {
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar: mobile hamburger + Header — div wrapper to avoid nested <header> */}
-        <div className="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center gap-3">
+        {/* Top bar: mobile hamburger + Header — div wrapper avoids nested <header> */}
+        <div className="bg-white px-4 md:px-6 py-3 flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(true)}
             className="md:hidden p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
