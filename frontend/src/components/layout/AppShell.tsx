@@ -25,19 +25,102 @@ function ModuleFallback() {
   );
 }
 
+function InitialLoadingSkeleton() {
+  return (
+    <div className="flex h-screen bg-slate-50">
+      {/* Sidebar skeleton */}
+      <div className="hidden md:flex w-56 bg-white border-r border-slate-200 flex-col">
+        <div className="px-5 py-5 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="skeleton w-8 h-8 rounded-lg" />
+            <div>
+              <div className="skeleton w-28 h-4 mb-1" />
+              <div className="skeleton w-20 h-3" />
+            </div>
+          </div>
+        </div>
+        <div className="px-3 py-4 space-y-1">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="skeleton w-full h-10 rounded-lg" style={{ animationDelay: `${i * 50}ms` }} />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="bg-white px-6 py-3 flex items-center gap-3">
+          <div className="skeleton w-8 h-8 rounded-lg md:hidden" />
+          <div className="flex-1 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div>
+                <div className="skeleton w-32 h-5 mb-1" />
+                <div className="skeleton w-48 h-3" />
+              </div>
+              <div className="skeleton w-px h-8" />
+              <div>
+                <div className="skeleton w-16 h-7 mb-1" />
+                <div className="skeleton w-8 h-3" />
+              </div>
+            </div>
+            <div className="skeleton w-20 h-8 rounded-lg" />
+          </div>
+        </div>
+
+        <main className="flex-1 overflow-auto">
+          <div className="px-4 md:px-6 py-4 border-b border-slate-100 bg-white">
+            <div className="skeleton w-40 h-5" />
+          </div>
+          <div className="px-4 md:px-6 pb-8 pt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-6 flex flex-col items-center justify-center h-80">
+                <div className="skeleton w-32 h-8 rounded-full mb-4" />
+                <div className="skeleton w-32 h-32 rounded-full" />
+                <div className="skeleton w-24 h-4 mt-4" />
+              </div>
+              <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 animate-pulse-soft" style={{ animationDelay: `${i * 60}ms` }}>
+                    <div className="skeleton w-14 h-3 mb-3" />
+                    <div className="skeleton w-10 h-6 mb-2" />
+                    <div className="skeleton w-16 h-3" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 export default function AppShell() {
   const { cities } = useCities();
   const [selectedCityId, setSelectedCityId] = useState<string>('delhi');
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const lastUpdatedRef = useRef<string | null>(null);
 
   const selectedCity = cities.find(c => c.id === selectedCityId) || null;
   const { data: airQuality, loading: aqLoading, refresh: refreshAQ } = useAirQuality(selectedCity);
 
   useEffect(() => {
-    if (airQuality) lastUpdatedRef.current = new Date().toISOString();
-  }, [airQuality]);
+    if (airQuality) {
+      lastUpdatedRef.current = new Date().toISOString();
+      // Initial load complete once we have data
+      setInitialLoading(false);
+    }
+    // Also stop initial loading if cities are loaded but no data (edge case)
+    if (cities.length > 0 && selectedCity && !airQuality && !aqLoading) {
+      const timer = setTimeout(() => setInitialLoading(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [airQuality, cities, selectedCity, aqLoading]);
+
+  // Show initial skeleton only on first page load
+  if (initialLoading && !airQuality && cities.length === 0) {
+    return <InitialLoadingSkeleton />;
+  }
 
   const handleRefresh = useCallback(() => {
     refreshAQ();
@@ -72,8 +155,8 @@ export default function AppShell() {
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar: mobile hamburger + Header — div wrapper avoids nested <header> */}
-        <div className="bg-white px-4 md:px-6 py-3 flex items-center gap-3">
+        {/* Top bar: mobile hamburger + Header */}
+        <div className="bg-white px-4 md:px-6 py-3 flex items-center gap-3 border-b border-slate-200">
           <button
             onClick={() => setSidebarOpen(true)}
             className="md:hidden p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
