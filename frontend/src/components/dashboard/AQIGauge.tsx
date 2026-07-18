@@ -38,14 +38,14 @@ export default function AQIGauge({ aqi, label, color, size = 'md', prevAqi }: AQ
   useEffect(() => {
     const start = startAqi;
     const end = targetAqi;
-    const duration = 600;
+    const duration = 250;
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
+      // ease-out quad
+      const eased = 1 - Math.pow(1 - progress, 2);
       const current = Math.round(start + (end - start) * eased);
       setDisplayValue(current);
       if (progress < 1) {
@@ -120,7 +120,7 @@ export default function AQIGauge({ aqi, label, color, size = 'md', prevAqi }: AQ
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
-            className="transition-all duration-[600ms] ease-out"
+            className="transition-all duration-[250ms] ease-out"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">

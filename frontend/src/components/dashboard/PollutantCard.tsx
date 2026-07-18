@@ -43,13 +43,19 @@ export default function PollutantCard({ pollutant, data }: PollutantCardProps) {
       : 'Good'
     : '—';
 
+  const toggleDetail = () => setShowDetail(prev => !prev);
+
   return (
     <div
       className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-lg hover:border-slate-300 transition-all duration-200 relative"
       onMouseEnter={() => setShowDetail(true)}
       onMouseLeave={() => setShowDetail(false)}
       onFocus={() => setShowDetail(true)}
-      onBlur={() => setShowDetail(false)}
+      onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setShowDetail(false); }}
+      onClick={toggleDetail}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleDetail(); }}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
