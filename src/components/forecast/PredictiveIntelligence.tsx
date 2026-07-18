@@ -19,7 +19,7 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
       <div className="space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4">
+            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 animate-pulse-soft" style={{ animationDelay: `${i * 60}ms` }}>
               <div className="skeleton w-16 h-3 mb-2" />
               <div className="skeleton w-20 h-6" />
             </div>
@@ -51,6 +51,20 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
     aqi: f.aqi,
     pm25: f.pm25,
     confidence: f.confidence,
+    hoursFromNow: f.hoursFromNow,
+  }));
+
+  // Find the split point: current (first 24h) vs predicted (beyond 24h)
+  const splitIndex = chartData.findIndex(d => d.hoursFromNow > 24);
+  const currentData = chartData.map(d => ({
+    ...d,
+    // Only show AQI for current portion
+    currentAqi: d.hoursFromNow <= 24 ? d.aqi : null,
+    predictedAqi: d.hoursFromNow > 24 ? d.aqi : null,
+    // Confidence band: ±(100-confidence)% of AQI
+    confidenceBand: d.aqi * ((100 - d.confidence) / 100),
+    bandTop: d.aqi + d.aqi * ((100 - d.confidence) / 100),
+    bandBottom: Math.max(0, d.aqi - d.aqi * ((100 - d.confidence) / 100)),
   }));
 
   const trendIcon = data.trend === 'Improving' ? <ArrowDown size={14} /> :
@@ -69,7 +83,7 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[10px] text-slate-400">{data.season} season</span>
-          <button onClick={refresh} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+          <button onClick={refresh} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" aria-label="Refresh forecast">
             <RefreshCw size={14} />
           </button>
         </div>
@@ -88,29 +102,49 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-slate-700">AQI Forecast (72 hours)</h3>
           <div className="flex items-center gap-3 text-[10px] text-slate-400">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-brand-500" /> AQI</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-brand-500" /> Observed</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-1.5 border-t-2 border-dashed border-orange-500" /> Predicted</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-300" /> Confidence band</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> Poor threshold</span>
           </div>
         </div>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={chartData}>
+          <AreaChart data={currentData}>
             <defs>
               <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#3b91e8" stopOpacity={0.12} />
                 <stop offset="95%" stopColor="#3b91e8" stopOpacity={0} />
               </linearGradient>
+              <linearGradient id="predictedGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#f97316" stopOpacity={0.08} />
+                <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="confidenceBand" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3b91e8" stopOpacity={0.12} />
+                <stop offset="100%" stopColor="#3b91e8" stopOpacity={0.04} />
+              </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={1} />
+            <XAxis
+              dataKey="time"
+              tick={{ fontSize: 11, fill: '#94a3b8' }}
+              axisLine={false}
+              tickLine={false}
+              interval={1}
+            />
             <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={40} />
             <Tooltip
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
+                const isPredicted = d.hoursFromNow > 24;
                 return (
                   <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs">
                     <p className="font-semibold text-slate-900">{label}</p>
-                    <p className="text-slate-600 mt-1">AQI: <strong>{d.aqi}</strong> ({getAQILabel(d.aqi)})</p>
+                    <p className="text-slate-600 mt-1">
+                      AQI: <strong>{d.aqi}</strong> ({getAQILabel(d.aqi)})
+                    </p>
+                    {isPredicted && <p className="text-orange-500 text-[10px] font-medium">Forecast</p>}
                     <p className="text-slate-500">PM2.5: {d.pm25} µg/m³</p>
                     <p className="text-slate-400">Confidence: {d.confidence}%</p>
                   </div>
@@ -119,9 +153,47 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
             />
             <ReferenceLine y={200} stroke="#f97316" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Poor', fontSize: 10, fill: '#f97316', position: 'right' }} />
             <ReferenceLine y={300} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Very Poor', fontSize: 10, fill: '#ef4444', position: 'right' }} />
-            <Area type="monotone" dataKey="aqi" stroke="#3b91e8" strokeWidth={2} fill="url(#forecastGradient)" />
+
+            {/* Confidence band for predicted portion */}
+            {splitIndex > 0 && (
+              <Area
+                type="monotone"
+                dataKey="bandTop"
+                stroke="none"
+                fill="url(#confidenceBand)"
+                connectNulls={false}
+              />
+            )}
+
+            {/* Observed AQI (solid line) */}
+            <Area
+              type="monotone"
+              dataKey="currentAqi"
+              stroke="#3b91e8"
+              strokeWidth={2.5}
+              fill="url(#forecastGradient)"
+              connectNulls
+            />
+
+            {/* Predicted AQI (dashed line) */}
+            <Area
+              type="monotone"
+              dataKey="predictedAqi"
+              stroke="#f97316"
+              strokeWidth={2}
+              strokeDasharray="6 3"
+              fill="url(#predictedGradient)"
+              connectNulls
+            />
           </AreaChart>
         </ResponsiveContainer>
+
+        {/* Legend separator label */}
+        <div className="flex items-center gap-2 mt-2 text-[10px] text-slate-400">
+          <span>← Observed (24h)</span>
+          <span className="text-slate-300">|</span>
+          <span>Forecast (48h) →</span>
+        </div>
       </div>
 
       {/* Forecast Table */}
@@ -142,38 +214,44 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
               </tr>
             </thead>
             <tbody>
-              {data.forecast.map((f, i) => (
-                <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                  <td className="px-5 py-3 font-medium text-slate-800">{f.hour}</td>
-                  <td className="px-4 py-3">
-                    <span className="font-semibold" style={{ color: f.color }}>{f.aqi}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-medium" style={{ backgroundColor: f.color + '15', color: f.color }}>
-                      {f.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">{f.pm25} µg/m³</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all" style={{ width: `${f.confidence}%`, backgroundColor: f.confidence > 70 ? '#16a34a' : f.confidence > 50 ? '#eab308' : '#ef4444' }} />
+              {data.forecast.map((f, i) => {
+                const isPredicted = f.hoursFromNow > 24;
+                return (
+                  <tr key={i} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${isPredicted ? 'opacity-85' : ''}`}>
+                    <td className="px-5 py-3 font-medium text-slate-800">
+                      {f.hour}
+                      {isPredicted && <span className="ml-1.5 text-[10px] text-orange-500 font-normal">(forecast)</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-semibold font-mono" style={{ color: f.color }}>{f.aqi}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium" style={{ backgroundColor: f.color + '15', color: f.color }}>
+                        {f.category}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-700 font-mono">{f.pm25} µg/m³</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all" style={{ width: `${f.confidence}%`, backgroundColor: f.confidence > 70 ? '#16a34a' : f.confidence > 50 ? '#eab308' : '#ef4444' }} />
+                        </div>
+                        <span className="text-xs text-slate-500 font-mono">{f.confidence}%</span>
                       </div>
-                      <span className="text-xs text-slate-500">{f.confidence}%</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {f.alerts?.length > 0 ? (
-                      <div className="flex items-center gap-1 text-red-600 text-[11px]">
-                        <AlertTriangle size={12} />
-                        <span>{f.alerts[0]}</span>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400 text-[11px]">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-3">
+                      {f.alerts?.length > 0 ? (
+                        <div className="flex items-center gap-1 text-red-600 text-[11px]">
+                          <AlertTriangle size={12} />
+                          <span>{f.alerts[0]}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

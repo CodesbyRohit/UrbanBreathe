@@ -1,6 +1,6 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import { Brain, Shield, Info, RefreshCw } from 'lucide-react';
+import { Brain, Shield, Info, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useSourceAttribution } from '../../hooks/useSources';
 import { SOURCE_LABELS, SOURCE_COLORS } from '../../utils/constants';
 
@@ -49,6 +49,8 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
     mitigation: s.mitigation,
   }));
 
+  const avgConfidence = Math.round(data.sortedSources.reduce((s, x) => s + x.confidence, 0) / data.sortedSources.length);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -60,13 +62,51 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
           <h2 className="text-lg font-semibold text-slate-900">AI Source Attribution</h2>
           <p className="text-sm text-slate-500">Explainable AI analysis of pollution contributors</p>
         </div>
-        <div className="ml-auto flex items-center gap-2 text-xs text-slate-500">
-          <Shield size={14} />
-          Confidence: {Math.round(data.sortedSources.reduce((s, x) => s + x.confidence, 0) / data.sortedSources.length)}%
+        <div className="ml-auto flex items-center gap-2">
+          <button onClick={refresh} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" aria-label="Refresh data">
+            <RefreshCw size={14} />
+          </button>
         </div>
-        <button onClick={refresh} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-          <RefreshCw size={14} />
-        </button>
+      </div>
+
+      {/* Confidence + Why This Matters banner */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${
+            avgConfidence > 80 ? 'bg-teal-50 text-teal-600' :
+            avgConfidence > 60 ? 'bg-amber-50 text-amber-600' :
+            'bg-red-50 text-red-600'
+          }`}>
+            <Shield size={18} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-800">Model Confidence: {avgConfidence}%</span>
+              <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${
+                  avgConfidence > 80 ? 'bg-teal-500' :
+                  avgConfidence > 60 ? 'bg-amber-500' : 'bg-red-500'
+                }`} style={{ width: `${avgConfidence}%` }} />
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {avgConfidence > 80 ? 'High reliability — data cross-validated across multiple sensor networks' :
+               avgConfidence > 60 ? 'Moderate reliability — some data gaps filled by statistical modeling' :
+               'Lower confidence — supplement with local sensor readings where possible'}
+            </p>
+          </div>
+        </div>
+        <div className="bg-brand-50 rounded-xl border border-brand-100 p-3 flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-brand-100 text-brand-600">
+            <Info size={18} />
+          </div>
+          <div>
+            <span className="text-sm font-semibold text-brand-800">Why this matters</span>
+            <p className="text-xs text-brand-700 mt-0.5">
+              Understanding which sources contribute most helps target policy interventions where they have the greatest impact on public health.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -82,11 +122,12 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
                   if (!active || !payload?.length) return null;
                   const d = payload[0].payload;
                   return (
-                    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs max-w-[200px]">
+                    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs max-w-[220px]">
                       <p className="font-semibold text-slate-900">{d.name}</p>
                       <p className="text-slate-600 mt-1">Contribution: <strong>{d.value}%</strong></p>
                       <p className="text-slate-500">Confidence: {d.confidence}%</p>
                       <p className="text-slate-400 mt-1">{d.description}</p>
+                      <p className="text-brand-600 mt-1 text-[10px] font-medium">{d.mitigation}</p>
                     </div>
                   );
                 }}
@@ -98,6 +139,16 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          {/* Legend */}
+          <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-slate-100">
+            {chartData.map(entry => (
+              <div key={entry.name} className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.fill }} />
+                <span className="text-xs text-slate-600">{entry.name}</span>
+                <span className="text-xs font-mono text-slate-400">{entry.value}%</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Pie Chart */}
@@ -118,11 +169,18 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
                     <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs">
                       <p className="font-semibold text-slate-900">{d.name}</p>
                       <p className="text-slate-600">{d.value}% contribution</p>
+                      <p className="text-slate-500">Confidence: {d.confidence}%</p>
                     </div>
                   );
                 }}
               />
-              <Legend verticalAlign="bottom" formatter={(value) => <span className="text-xs text-slate-600">{value}</span>} />
+              <Legend
+                verticalAlign="bottom"
+                formatter={(value, _entry, index) => {
+                  const entry = chartData[index];
+                  return <span className="text-xs text-slate-600">{value} — {entry.confidence}% conf.</span>;
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -140,15 +198,16 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
                     <span className="text-sm font-semibold text-slate-800">{SOURCE_LABELS[s.source] || s.source}</span>
-                    <span className="text-sm font-bold" style={{ color }}>{s.percentage}%</span>
+                    <span className="text-sm font-bold font-mono" style={{ color }}>{s.percentage}%</span>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
                     <Shield size={12} />
                     {s.confidence}% confidence
+                    {s.confidence < 60 && <AlertTriangle size={12} className="text-amber-500" />}
                   </div>
                 </div>
                 <p className="text-xs text-slate-600 mb-2">{s.description}</p>
-                <div className="flex items-start gap-1.5 text-xs text-brand-700 bg-brand-50 rounded px-2 py-1.5">
+                <div className="flex items-start gap-1.5 text-xs text-brand-700 bg-brand-50 rounded px-2 py-1.5 border border-brand-100">
                   <Info size={12} className="mt-0.5 shrink-0" />
                   <span>{s.mitigation}</span>
                 </div>
