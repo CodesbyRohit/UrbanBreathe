@@ -41,7 +41,7 @@ https://github.com/user-attachments/assets/placeholder
 
 ## Overview
 
-UrbanBreathe is a government-grade operational platform that enables municipal authorities to **monitor**, **predict**, **simulate**, and **respond** to air pollution across 10 major Indian cities. It combines real-time AQI monitoring with explainable AI for source attribution, 72-hour forecasting, policy intervention simulation, automated executive reporting, and multilingual citizen advisories — all within a premium, command-centre-grade interface.
+UrbanBreathe is a government-grade operational platform that enables municipal authorities to **monitor**, **predict**, **simulate**, and **respond** to air pollution across 10 major Indian cities. It combines real-time AQI monitoring with heuristic pollutant-source correlation for attribution, 72-hour forecasting, policy intervention simulation, automated executive reporting, and multilingual citizen advisories — all within a premium, command-centre-grade interface.
 
 Built for the **ET AI Hackathon 2.0 — Grand Finale**.
 
@@ -50,7 +50,7 @@ Built for the **ET AI Hackathon 2.0 — Grand Finale**.
 | Capability | Description |
 |---|---|
 | **Live Monitoring** | Real-time AQI, 6 pollutants, weather conditions, trend charts |
-| **AI Source Attribution** | Explainable multi-factor pollution source estimation with confidence scoring |
+| **Source Attribution** | Heuristic multi-factor pollution source correlation with confidence scoring |
 | **Predictive Intelligence** | 72-hour AQI forecast with diurnal cycle modeling and confidence bands |
 | **Policy Simulator** | Test 8 intervention types with real-time impact projections |
 | **Executive Briefing** | Auto-generated government-ready situational reports with PDF export |
@@ -79,7 +79,7 @@ On first load, users are greeted with a full-screen **InitGate** that unlocks th
 - Anomaly detection badges with automatic highlighting
 - Auto-refresh with loading skeletons and error recovery
 
-### 🔬 AI Source Attribution
+### 🔬 Source Attribution
 - Estimates pollution contributions from 5+ source categories (traffic, industry, biomass burning, dust/construction, others)
 - Confidence scoring per source with seasonal adjustment
 - Interactive bar + pie chart visualization
@@ -154,7 +154,7 @@ Output metrics: Projected AQI, PM2.5 reduction, hospital admissions averted, pop
 | **AI Voice** | Browser-native SpeechSynthesis (no dependencies) |
 | **Backend** | Node.js, Express 5 |
 | **Data APIs** | Open-Meteo (free, no API key required) |
-| **AI Engine** | Custom explainable models in Node.js |
+| **Correlation Engine** | Heuristic multi-factor pollution source correlation in Node.js |
 | **Deployment** | Vercel (frontend + serverless API) |
 | **Fonts** | Inter (UI), JetBrains Mono (data) |
 
@@ -203,7 +203,7 @@ The application follows a standard client-server architecture with lazy-loaded f
 │                                                                     │
 │  Services:                                                           │
 │    ├── openMeteoService    → Fetch + fallback data pipeline          │
-│    ├── sourceAttribution   → AI engine (multi-factor correlation)   │
+│    ├── sourceAttribution   → Heuristic correlation engine             │
 │    ├── forecastService     → Diurnal cycle + seasonal model         │
 │    ├── simulationEngine    → Policy intervention impact model       │
 │    └── briefGenerator      → Natural language report synthesis      │
@@ -290,7 +290,7 @@ npm run build
 
 3. **Monitor live conditions** — The Dashboard shows real-time AQI with a color-coded gauge, 6 pollutant readings, weather conditions, and a timeline chart.
 
-4. **Analyze pollution sources** — Visit the Source Attribution module to see AI-estimated contributions from traffic, industry, biomass burning, and more.
+4. **Analyze pollution sources** — Visit the Source Attribution module to see estimated contributions from traffic, industry, biomass burning, and more.
 
 5. **View the forecast** — Predictive Intelligence shows a 72-hour projection with confidence bands and an hourly breakdown table.
 
@@ -309,7 +309,7 @@ npm run build
 | `GET` | `/api/cities` | List all supported cities |
 | `GET` | `/api/cities/:id` | Get city details |
 | `GET` | `/api/air-quality/:cityId?lat=&lon=` | Live air quality data |
-| `GET` | `/api/sources/:cityId` | AI source attribution analysis |
+| `GET` | `/api/sources/:cityId` | Source attribution analysis |
 | `GET` | `/api/forecast/:cityId` | 72-hour AQI forecast |
 | `GET` | `/api/simulation/interventions` | Available policy interventions |
 | `POST` | `/api/simulation/run` | Run policy simulation with selected interventions |
@@ -496,6 +496,86 @@ urbanbreathe/
 
 ---
 
+## Technical Approach & Roadmap
+
+This section provides an honest account of the technical methods used and their limitations relative to the approaches specified in production-grade air quality systems. Nothing in this codebase claims or implies ML training, trained models, or ML-derived parameters.
+
+### Source Attribution
+
+**Current method:** Weighted multi-factor heuristic correlation. The engine compares current pollutant concentrations (PM2.5, PM10, NO₂, SO₂, CO, O₃) against predefined source profiles that map pollutants to source categories (traffic, industry, biomass burning, dust, others). Each source gets a confidence score based on how many of its indicator pollutants exceed a threshold. Seasonal multipliers adjust contributions (e.g. biomass burning weighted higher in winter).
+
+**What a production system would use (v2):** A trained Random Forest model with source-receptor matrices derived from historical monitoring data. This would require:
+- A training dataset of historical pollutant concentrations paired with known source activity periods (e.g. crop burning seasons, traffic data, industrial production indexes)
+- A feature engineering pipeline to construct source-receptor coefficients from spatial correlation patterns
+- A trained Random Forest regressor outputting source contribution percentages with calibrated confidence intervals
+- Regular retraining as new monitoring data becomes available
+
+**Honest statement:** This is a heuristic rule-based system. There is no trained ML model, no training dataset, and no source-receptor matrix in this codebase. The heuristic provides reasonable directional estimates but has no learning component.
+
+### Forecasting (Predictive Intelligence)
+
+**Current method:** Heuristic diurnal cycle model with seasonal multipliers. The forecast applies a sinusoidal diurnal curve (peaking post-midnight, troughing mid-afternoon) modulated by seasonal amplitude/variance parameters, plus a linear trend factor and uniform random noise. No historical data is used — the forecast extrapolates from the single current AQI reading.
+
+**What a production system would use (v2):** A Temporal Convolutional Network (TCN) trained on multi-year historical AQI and meteorological data. This would require:
+- 2-5 years of historical hourly AQI data per city from CPCB monitoring stations
+- Meteorological covariates (wind speed/direction, temperature, humidity, boundary layer height)
+- A TCN architecture with dilated causal convolutions to capture multi-scale temporal patterns
+- Train/validation/test split with temporal cross-validation
+- A model serving pipeline for hourly inference
+
+**Honest statement:** The current forecast is not a TCN or any ML model. It is a deterministic heuristic that assumes daily periodicity and random noise. It is useful for directional trend indication but has measured forecast error that would not meet regulatory standards.
+
+### Spatial Resolution
+
+**Current resolution:** City-level point data. Each city is represented by a single coordinate pair. All readings and forecasts apply uniformly across the entire city.
+
+**What a production system would use (v2):** 1km×1km grid resolution with spatial interpolation. This would require:
+- A dense network of monitoring stations or satellite-derived pollution surfaces
+- Kriging or inverse-distance weighting interpolation between stations
+- A gridded output format (GeoTIFF or similar) for visualization
+- Integration with atmospheric dispersion models to account for pollutant transport
+
+**Honest statement:** There is no gridded resolution or spatial interpolation. The platform operates at city-centroid granularity.
+
+### Atmospheric Dispersion Modeling
+
+**Current method:** None. The platform does not model how pollutants move through the atmosphere.
+
+**What a production system would use (v2):** Gaussian plume or Lagrangian puff dispersion models (e.g. AERMOD, CALPUFF). This would require:
+- Meteorological data (wind fields, mixing height, stability class)
+- Emissions inventory with source locations, stack parameters, and temporal profiles
+- A dispersion model engine that solves the advection-diffusion equation
+- Integration with the gridded concentration field for visualization
+
+**Honest statement:** No dispersion modeling is implemented. The platform treats each city's pollution as a closed system without transport from upwind sources.
+
+### What This Prototype Does Implement
+
+While the ML/AI components are heuristic (as disclosed above), several modules in this platform implement real, functioning decision-support logic that is deterministic, transparent, and immediately usable by command centre operators — no ML required:
+
+- **Anomaly Detection** (`detectAnomaly` in `forecastService.js`): Compares current AQI readings against a city-specific diurnal expectation model. If the deviation exceeds 40% of the expected value, the system flags it as an anomaly with direction (above/below normal), deviation percentage, and expected range — all computed deterministically from the city's baseline AQI, time of day, and seasonal parameters. This is genuine automation of a human analyst's pattern-recognition workflow, not an ML approximation.
+
+- **Enforcement Prioritization Scoring** (`EnforcementIntelligence.tsx`): Ranks pollution anomalies by severity, duration, and geographic spread using a deterministic scoring function. Produces prioritized enforcement actions (e.g. which industrial zones to inspect first) based on transparent rules that can be audited and adjusted by municipal staff without needing to retrain a model.
+
+- **Policy Simulation** (`simulationEngine.js`): An 8-intervention impact model that computes projected AQI improvement, PM2.5 reduction, hospital admissions averted, population exposure, and implementation cost — all from a deterministic mapping of intervention type to pollutant impact coefficients, health impact rates, and population data. The model is transparent: every coefficient and formula is visible in source code, and results are reproducible given the same inputs.
+
+These modules represent real decision-support engineering — they automate analytical workflows that would otherwise require manual analyst effort, in a verifiable, deterministic way that is appropriate for government decision-making.
+
+### Why This Scope
+
+This prototype was built for a hackathon with a 4-week timeline. The heuristic approach was an intentional scope decision: it provides meaningful directional intelligence (which sources dominate, whether AQI is trending up/down, which interventions have the largest expected impact) without the multi-month data collection and model development that production ML would require. Every heuristic is transparent, deterministic, and auditable — tradeoffs were made transparently in favor of a working, verifiable prototype over an aspirational but incomplete ML pipeline. The heuristic approach was an intentional scope decision: it provides meaningful directional intelligence (which sources dominate, whether AQI is trending up/down, which interventions have the largest expected impact) without the multi-month data collection and model development that production ML would require. Every heuristic is transparent, deterministic, and auditable — tradeoffs were made transparently in favor of a working, verifiable prototype over an aspirational but incomplete ML pipeline.
+
+### v2 Roadmap
+
+| Component | v1 Method | v2 Target | Data/Infrastructure Needed |
+|---|---|---|---|
+| Source attribution | Weighted multi-factor heuristic | Random Forest with source-receptor matrices | Historical pollutant + source activity data, feature pipeline, training infrastructure |
+| Forecasting | Diurnal cycle heuristic | TCN with meteorological covariates | 2-5 years hourly CPCB data, met station feeds, GPU training |
+| Spatial resolution | City-centroid point | 1km×1km gridded | Station network density, satellite data, interpolation engine |
+| Dispersion modeling | None | Gaussian plume (AERMOD) | Emissions inventory, met tower data, dispersion model license |
+
+---
+
 ## Environment Variables
 
 Copy `.env.example` to `.env`:
@@ -519,9 +599,9 @@ cp .env.example .env
 
 - **City coverage**: Currently supports 10 major Indian cities. Expanding to additional cities requires adding city coordinates and baseline AQI data.
 
-- **Forecast accuracy**: Forecasting uses diurnal cycle modeling with seasonal adjustment. For production use, this should be augmented with ML-based ensemble models trained on historical data.
+- **Forecast accuracy**: Forecasting uses a heuristic diurnal cycle model with seasonal adjustment — not a trained machine learning model (e.g. TCN). For production use, this should be replaced with ML-based ensemble models trained on historical CPCB data.
 
-- **Source attribution**: AI source attribution uses multi-factor pollutant correlation. Real-world deployments would supplement with satellite imagery analysis and local emissions inventories.
+- **Source attribution**: The source correlation engine uses a weighted multi-factor heuristic — not a trained Random Forest model with source-receptor matrices. Real-world deployments would replace this with ML-based source attribution trained on local emissions inventories and satellite imagery.
 
 - **Mobile optimization**: Desktop-optimized for command centre use. The app is usable on mobile but some data-dense views (forecast table, pollutant grid) are best viewed on larger screens.
 
