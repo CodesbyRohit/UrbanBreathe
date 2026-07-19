@@ -34,7 +34,7 @@ export default function Sidebar({ activeSection, onSectionChange, isOpen, onTogg
             <Activity size={16} className="text-white" />
           </div>
           <div>
-            <h1 className="text-sm font-semibold text-slate-900">UrbanBreathe</h1>
+            <span className="text-sm font-semibold text-slate-900">UrbanBreathe</span>
             <p className="text-[10px] text-slate-500 font-medium tracking-tight">Command Centre</p>
           </div>
           <button
