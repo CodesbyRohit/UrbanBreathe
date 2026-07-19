@@ -20,7 +20,7 @@ export default function Header({ city, airQuality, loading, onRefresh, lastUpdat
         {city && (
           <>
             <div>
-              <h2 className="text-base font-semibold text-slate-900">{city.name}</h2>
+              <h1 className="text-base font-semibold text-slate-900">{city.name}</h1>
               <p className="text-xs text-slate-500">{city.state} • Pop: {city.population}</p>
             </div>
             {airQuality && (

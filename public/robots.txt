@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /
+
+# UrbanBreathe — ET AI Hackathon 2.0 prototype
+# Blocked from crawl to prevent indexing of demo/pre-release content.
