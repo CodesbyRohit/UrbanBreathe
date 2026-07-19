@@ -53,7 +53,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <p className="text-sm text-slate-500">Unable to load air quality data.</p>
-          <p className="text-xs text-slate-400 mt-1">Please select a city and try again.</p>
+          <p className="text-xs text-slate-500 mt-1">Please select a city and try again.</p>
         </div>
       </div>
     );
@@ -84,7 +84,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
           <div className="mt-3 flex flex-col items-center gap-2">
             {airQuality.anomaly?.isAnomaly && (
               <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-200 rounded-full animate-fade-in" role="alert">
-                <AlertTriangle size={12} className="text-red-500 shrink-0" />
+                <AlertTriangle size={12} className="text-red-600 shrink-0" />
                 <span className="text-[11px] font-semibold text-red-700">
                   Anomaly: {airQuality.anomaly.deviationPercent}% {airQuality.anomaly.direction === 'above' ? 'above' : 'below'} expected
                 </span>
@@ -92,7 +92,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
             )}
             <span className="flex items-center gap-1.5 text-[11px]">
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${airQuality.dataSource === 'fallback' ? 'bg-amber-500' : 'bg-teal-500'}`} />
-              <span className={airQuality.dataSource === 'fallback' ? 'text-amber-600 font-medium' : 'text-slate-400'}>
+              <span className={airQuality.dataSource === 'fallback' ? 'text-amber-600 font-medium' : 'text-slate-500'}>
                 {airQuality.dataSource === 'fallback' ? 'Using fallback data — API unavailable' : 'Open-Meteo (Live)'}
               </span>
             </span>
@@ -100,8 +100,8 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
         </div>
 
         <div className="lg:col-span-2 space-y-3">
-          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-            <span className="w-1 h-1 rounded-full bg-slate-300" />
+          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-slate-400" />
             Weather
           </span>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -110,8 +110,8 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
             <MetricCard label="Wind Speed" value={Math.round(airQuality.windSpeed * 10) / 10} unit="km/h" icon={<Wind size={16} />} subtitle={airQuality.windDirection} />
             <MetricCard label="Visibility" value={airQuality.visibility?.toFixed(1) || '--'} unit="km" icon={<Eye size={16} />} />
           </div>
-          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-            <span className="w-1 h-1 rounded-full bg-slate-300" />
+          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-slate-400" />
             Air Quality
           </span>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -127,7 +127,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-slate-700">Pollutant Concentrations</h3>
-          <span className="text-[10px] text-slate-400 uppercase tracking-wider">All values in µg/m³ or ppb</span>
+          <span className="text-[10px] text-slate-500 uppercase tracking-wider">All values in µg/m³ or ppb</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {POLLUTANTS.map(p => (
@@ -142,9 +142,9 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
           <h3 className="text-sm font-semibold text-slate-700">Today's AQI Trend</h3>
           <span className="text-[11px] text-slate-500 font-medium">
             Peak: <span className="font-bold font-mono" style={{ color: aqiColor }}>198</span>
-            <span className="text-slate-400 mx-1">·</span>
+            <span className="text-slate-500 mx-1">·</span>
             Now: <span className="font-bold font-mono" style={{ color: aqiColor }}>{airQuality.aqi}</span>
-            <span className="text-slate-400 ml-1">{airQuality.aqi < 200 ? '↓ Improving' : '↑ Elevated'}</span>
+            <span className="text-slate-500 ml-1">{airQuality.aqi < 200 ? '↓ Improving' : '↑ Elevated'}</span>
           </span>
         </div>
         <ResponsiveContainer width="100%" height={200}>

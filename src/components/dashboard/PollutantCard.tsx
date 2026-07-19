@@ -69,10 +69,10 @@ export default function PollutantCard({ pollutant, data }: PollutantCardProps) {
           {formatConcentration(value, pollutant.unit)}
         </span>
         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-          status === 'Good' ? 'text-green-600 bg-green-50' :
-          status === 'Moderate' ? 'text-yellow-600 bg-yellow-50' :
-          status === 'Elevated' ? 'text-orange-600 bg-orange-50' :
-          'text-red-600 bg-red-50'
+          status === 'Good' ? 'text-green-700 bg-green-50' :
+          status === 'Moderate' ? 'text-yellow-700 bg-yellow-50' :
+          status === 'Elevated' ? 'text-orange-700 bg-orange-50' :
+          'text-red-700 bg-red-50'
         }`}>
           {status}
         </span>

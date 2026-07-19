@@ -96,7 +96,7 @@ export default function ImpactSection({ activeAnomalies, onNavigate }: ImpactSec
 
             <p className="text-xs text-[#475569] leading-relaxed mb-3">{card.description}</p>
             
-            <p className="text-[11px] text-[#64748b] leading-relaxed mb-3">{card.detail}</p>
+            <p className="text-[11px] text-[#475569] leading-relaxed mb-3">{card.detail}</p>
 
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#334155] group-hover:text-brand-600 transition-colors">
               Open {card.title === 'Early Warning' ? 'Live Monitoring' : 

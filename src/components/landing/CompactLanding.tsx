@@ -162,7 +162,7 @@ export default function CompactLanding({
                   <span className="text-xs font-semibold text-[#1e293b]">{card.label}</span>
                 </div>
                 <p className="text-[11px] text-[#334155] leading-snug">{card.desc}</p>
-                <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-[#64748b] group-hover:text-brand-500 transition-colors mt-1">
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-[#475569] group-hover:text-brand-500 transition-colors mt-1">
                   {card.action} <ArrowRight size={10} />
                 </span>
               </button>

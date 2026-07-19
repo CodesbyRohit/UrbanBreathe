@@ -41,7 +41,7 @@ export default function Sidebar({ activeSection, onSectionChange, isOpen, onTogg
           </div>
           <button
             onClick={onToggle}
-            className="md:hidden ml-auto p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+            className="md:hidden ml-auto p-1 text-slate-500 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
             aria-label="Close navigation menu"
           >
             <X size={18} />
@@ -64,7 +64,7 @@ export default function Sidebar({ activeSection, onSectionChange, isOpen, onTogg
               aria-current={isActive ? 'page' : undefined}
               aria-label={`${item.label}${isActive ? ' (active)' : ''}`}
             >
-              <span className={isActive ? 'text-brand-500' : 'text-slate-400'}>
+              <span className={isActive ? 'text-brand-500' : 'text-slate-500'}>
                 {iconMap[item.icon]}
               </span>
               <span>{item.label}</span>
@@ -77,7 +77,7 @@ export default function Sidebar({ activeSection, onSectionChange, isOpen, onTogg
       </nav>
 
       <div className="px-4 py-3 border-t border-slate-100">
-        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+        <div className="flex items-center gap-2 text-[11px] text-slate-500">
           <span className="w-1.5 h-1.5 rounded-full bg-teal-500" aria-hidden="true" />
           System Online
         </div>

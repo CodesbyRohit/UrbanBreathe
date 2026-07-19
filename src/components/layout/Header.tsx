@@ -62,14 +62,14 @@ export default function Header({ city, airQuality, loading, onRefresh, lastUpdat
         {/* Theme toggle */}
         <button
           onClick={onToggleTheme}
-          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
           aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
         >
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
 
         {lastUpdated && (
-          <span className="text-xs text-slate-400 flex items-center gap-1.5">
+          <span className="text-xs text-slate-500 flex items-center gap-1.5">
             <Clock size={12} />
             {timeAgo(lastUpdated)}
           </span>
