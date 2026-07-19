@@ -87,6 +87,20 @@ export default function CompactLanding({
   cities, selectedCityId, airQualityMap, anomalyMap, worstCity, activeAnomalies,
   onSelectCity, onEnterDashboard, onNavigate,
 }: CompactLandingProps) {
+  // Pre-unlock speechSynthesis so BootSequence can auto-speak without a separate click
+  const handleEnterDashboard = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      // Speak + immediately cancel: primes Chrome's speech engine so subsequent
+      // speak() calls from non-gesture contexts (timers) are permitted.
+      // Must be called synchronously inside a user gesture (this click handler).
+      const unlock = new SpeechSynthesisUtterance(' ');
+      window.speechSynthesis.speak(unlock);
+      window.speechSynthesis.cancel(); // killed before any audio frame is queued
+    }
+    sessionStorage.setItem('urbanbreathe_audio_unlocked', 'true');
+    onEnterDashboard();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Top: Problem statement + impact cards */}
@@ -155,7 +169,7 @@ export default function CompactLanding({
             ))}
             {/* CTA button spans the 2-column grid */}
             <button
-              onClick={onEnterDashboard}
+              onClick={handleEnterDashboard}
               className="col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-500 text-white text-xs font-semibold rounded-lg
                 hover:bg-brand-600 transition-all duration-200 shadow-sm hover:shadow-md mt-1"
             >

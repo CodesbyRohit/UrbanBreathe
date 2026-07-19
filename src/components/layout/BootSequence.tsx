@@ -42,9 +42,12 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
   const [voiceSupported, setVoiceSupported] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(() => {
     const stored = sessionStorage.getItem(VOICE_MUTED_KEY);
-    // Default to muted (no voice) on first visit
-    if (stored === null) return true;
-    return stored === 'true';
+    // If user manually toggled mute before, respect it
+    if (stored !== null) return stored === 'true';
+    // If audio was pre-unlocked by the Enter Command Centre click, default to ON
+    if (sessionStorage.getItem('urbanbreathe_audio_unlocked') === 'true') return false;
+    // First visit — start muted; the user can unmute via the toggle
+    return true;
   });
   const voiceMutedRef = useRef(voiceMuted);
   voiceMutedRef.current = voiceMuted;
