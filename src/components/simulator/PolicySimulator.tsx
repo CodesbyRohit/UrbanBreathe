@@ -11,7 +11,7 @@ interface PolicySimulatorProps {
 const CATEGORY_COLORS: Record<string, string> = {
   Regulatory: '#3b91e8',
   Traffic: '#f97316',
-  Mitigation: '#16a34a',
+  Mitigation: '#15803d',
   'Long-term': '#7c3aed',
 };
 
@@ -49,7 +49,7 @@ export default function PolicySimulator({ cityId }: PolicySimulatorProps) {
 
   const effectivenessData = result ? [
     { label: 'AQI Improvement', value: result.effectiveness.aqiImprovement, color: '#3b91e8' },
-    { label: 'PM2.5 Reduction', value: result.effectiveness.pm25Reduction, color: '#16a34a' },
+    { label: 'PM2.5 Reduction', value: result.effectiveness.pm25Reduction, color: '#15803d' },
     { label: 'Health Impact', value: result.effectiveness.healthImpact, color: '#f97316' },
     { label: 'Feasibility', value: result.effectiveness.feasibility, color: '#7c3aed' },
   ] : [];

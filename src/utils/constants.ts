@@ -1,10 +1,10 @@
 export const AQI_COLORS = {
-  Good: { color: '#16a34a', bg: '#dcfce7' },
-  Satisfactory: { color: '#65a30d', bg: '#ecfccb' },
-  Moderate: { color: '#eab308', bg: '#fef9c3' },
-  Poor: { color: '#f97316', bg: '#ffedd5' },
-  'Very Poor': { color: '#ef4444', bg: '#fee2e2' },
-  Severe: { color: '#7c3aed', bg: '#f3e8ff' },
+  Good: { color: '#15803d', bg: '#dcfce7' },
+  Satisfactory: { color: '#4d7c0f', bg: '#ecfccb' },
+  Moderate: { color: '#a16207', bg: '#fef9c3' },
+  Poor: { color: '#c2410c', bg: '#ffedd5' },
+  'Very Poor': { color: '#b91c1c', bg: '#fee2e2' },
+  Severe: { color: '#6d28d9', bg: '#f3e8ff' },
 };
 
 export const NAV_ITEMS = [
@@ -37,10 +37,10 @@ export const SOURCE_LABELS: Record<string, string> = {
 
 export const SOURCE_COLORS: Record<string, string> = {
   traffic: '#3b91e8',
-  industry: '#ef4444',
-  biomass: '#f97316',
-  dust: '#eab308',
-  others: '#94a3b8',
+  industry: '#b91c1c',
+  biomass: '#c2410c',
+  dust: '#a16207',
+  others: '#64748b',
 };
 
 export const API_BASE = '/api';

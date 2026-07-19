@@ -126,7 +126,7 @@ export default function CompactLanding({
               label="Anomalies"
               value={String(activeAnomalies)}
               sub="Active events"
-              color={activeAnomalies > 0 ? '#ef4444' : '#16a34a'}
+              color={activeAnomalies > 0 ? '#b91c1c' : '#15803d'}
             />
             <StatCard label="Data Source" value="Open-Meteo" sub="Real-time API" color="#65a30d" />
           </div>

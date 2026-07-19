@@ -61,7 +61,7 @@ export default function ExecutiveBrief({ cityId }: ExecutiveBriefProps) {
             .priority-CRITICAL { background: #fee2e2; color: #dc2626; }
             .priority-HIGH { background: #ffedd5; color: #ea580c; }
             .priority-MEDIUM { background: #dbeafe; color: #2563eb; }
-            .priority-LOW { background: #f0fdf4; color: #16a34a; }
+            .priority-LOW { background: #f0fdf4; color: #15803d; }
             .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; page-break-inside: avoid; }
             .outcome-box { padding: 12px; border-radius: 8px; border: 1px solid; }
             .classification { font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 4px 10px; border: 1px solid #94a3b8; display: inline-block; border-radius: 4px; }
