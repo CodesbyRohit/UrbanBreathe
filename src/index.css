@@ -1,26 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 /* Light mode (default) contrast fix — override default Tailwind colors that fail WCAG AA
    Previous fix only applied to .theme-dark; the default :root state used raw Tailwind defaults.
    text-slate-400 = #94a3b8 (2.8:1 on white ✗) → #475569 (5.8:1 ✓)
-   text-slate-500 = #64748b (4.1:1 on white ✗) → #334155 (7.6:1 ✓)     
+   text-slate-500 = #64748b (4.1:1 on white ✗) → #334155 (7.6:1 ✓)
+   text-red-500 = #ef4444 (~3.0-3.8:1 on white ✗) → #b91c1c (5.5:1 ✓)
    Dark mode overrides below (.theme-dark rules) have higher specificity and still apply. */
 .text-slate-400 { color: #475569; }
 .text-slate-500 { color: #475569; }
-
+.text-red-500 { color: #b91c1c; }
 @layer base {
   * {
     box-sizing: border-box;
   }
-
   body {
     @apply bg-slate-50 text-slate-900 font-sans antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-
   /* ===== Theme System ===== */
   /* Light mode: command-centre precision aesthetic (default) */
   :root,
@@ -34,7 +32,6 @@
     --border: #e2e8f0;
     --border-light: #f1f5f9;
   }
-
   /* Dark mode: operational command centre */
   .theme-dark {
     --surface: #0f172a;
@@ -46,7 +43,6 @@
     --border: #334155;
     --border-light: #1e293b;
   }
-
   /* Dark mode overrides for existing components */
   .theme-dark body,
   .theme-dark .bg-white,
@@ -90,7 +86,6 @@
   .theme-dark .to-white {
     --tw-gradient-to: var(--surface);
   }
-
   /* ===== Custom scrollbar ===== */
   ::-webkit-scrollbar {
     width: 6px;
@@ -99,27 +94,22 @@
   ::-webkit-scrollbar-track { @apply bg-transparent; }
   ::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
   ::-webkit-scrollbar-thumb:hover { @apply bg-slate-400; }
-
   /* Focus ring for accessibility */
   *:focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-400;
   }
-
   /* Remove default select arrow */
   select {
     -webkit-appearance: none;
     -moz-appearance: none;
   }
-
   /* Print-specific overrides */
   @media print {
     body { @apply bg-white; }
     .no-print { display: none !important; }
     .print-only { display: block !important; }
   }
-
   .print-only { display: none; }
-
   /* ===== Loading skeleton animation ===== */
   @keyframes shimmer {
     0% { background-position: -200% 0; }
@@ -131,7 +121,6 @@
     animation: shimmer 1.5s ease-in-out infinite;
     border-radius: 0.5rem;
   }
-
   /* Scan line effect for boot sequence */
   @keyframes scanLine {
     0% { transform: translateY(-100vh); }
@@ -141,7 +130,6 @@
     animation: scanLine 3s linear infinite;
   }
 }
-
 @layer utilities {
   .text-balance { text-wrap: balance; }
 }
