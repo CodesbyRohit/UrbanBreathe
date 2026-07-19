@@ -2,9 +2,16 @@ import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 
 import Sidebar from './Sidebar';
 import Header from './Header';
 import CitySelector from '../common/CitySelector';
+import IndiaMap from '../common/IndiaMap';
+import BootSequence from './BootSequence';
+import HeroSection from '../landing/HeroSection';
+import ImpactSection from '../landing/ImpactSection';
 import { Menu, Loader } from 'lucide-react';
 import type { NavSection } from '../../utils/constants';
 import { useCities, useAirQuality } from '../../hooks/useCityData';
+import { useTheme } from '../../hooks/useTheme';
+import { getAirQuality } from '../../services/api';
+import type { AirQualityData } from '../../types';
 
 // Lazy-loaded modules for code-splitting
 const LiveMonitoring = lazy(() => import('../dashboard/LiveMonitoring'));
@@ -25,10 +32,194 @@ function ModuleFallback() {
   );
 }
 
+export default function AppShell() {
+  const { cities } = useCities();
+  const [selectedCityId, setSelectedCityId] = useState<string>('delhi');
+  const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [showHero, setShowHero] = useState(true);
+  const [showBoot, setShowBoot] = useState(false);
+  const lastUpdatedRef = useRef<string | null>(null);
+  const { theme, toggleTheme, isDark } = useTheme();
+
+  const selectedCity = cities.find(c => c.id === selectedCityId) || null;
+  const { data: airQuality, loading: aqLoading, refresh: refreshAQ } = useAirQuality(selectedCity);
+
+  // Track all air quality data for map and snapshot views
+  const [airQualityMap, setAirQualityMap] = useState<Record<string, AirQualityData | null>>({});
+
+  useEffect(() => {
+    if (airQuality && selectedCity) {
+      setAirQualityMap(prev => ({ ...prev, [selectedCity.id]: airQuality }));
+      lastUpdatedRef.current = new Date().toISOString();
+      setInitialLoading(false);
+    }
+    if (cities.length > 0 && selectedCity && !airQuality && !aqLoading) {
+      const timer = setTimeout(() => setInitialLoading(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [airQuality, cities, selectedCity, aqLoading]);
+
+  // Fetch air quality for all cities on mount (approximate for snapshot)
+  useEffect(() => {
+    if (cities.length === 0) return;
+    const fetchAll = async () => {
+      /* getAirQuality imported statically at top of file */
+      const results = await Promise.allSettled(
+        cities.map(c => getAirQuality(c.id, c.lat, c.lon).then(d => ({ id: c.id, data: d })))
+      );
+      const map: Record<string, AirQualityData | null> = {};
+      results.forEach(r => {
+        if (r.status === 'fulfilled') {
+          map[r.value.id] = r.value.data;
+        }
+      });
+      setAirQualityMap(prev => ({ ...prev, ...map }));
+    };
+    fetchAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cities.length > 0]);
+
+  const handleRefresh = useCallback(() => {
+    refreshAQ();
+    lastUpdatedRef.current = new Date().toISOString();
+  }, [refreshAQ]);
+
+  const handleCitySelect = useCallback((id: string) => {
+    setSelectedCityId(id);
+    // Keep dashboard active when selecting from map
+  }, []);
+
+  const handleNavigate = useCallback((section: NavSection) => {
+    setActiveSection(section);
+    setShowHero(false);
+    if (window.innerWidth < 768) setSidebarOpen(false);
+  }, []);
+
+  // Compute snapshot stats from real air quality data
+  const worstCity = (() => {
+    let worst: { name: string; aqi: number } | null = null;
+    Object.entries(airQualityMap).forEach(([id, data]) => {
+      if (data?.aqi && (!worst || data.aqi > worst.aqi)) {
+        const city = cities.find(c => c.id === id);
+        worst = { name: city?.name || id, aqi: data.aqi };
+      }
+    });
+    return worst;
+  })();
+
+  const activeAnomalies = Object.values(airQualityMap).filter(
+    d => d?.anomaly?.isAnomaly
+  ).length;
+
+  const anomalyMap: Record<string, boolean> = {};
+  Object.entries(airQualityMap).forEach(([id, data]) => {
+    anomalyMap[id] = data?.anomaly?.isAnomaly ?? false;
+  });
+
+  // Hero/landing section (before command centre) — shown first
+  if (showHero) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <HeroSection
+          cities={cities}
+          worstCity={worstCity}
+          activeAnomalies={activeAnomalies}
+          airQualityMap={airQualityMap}
+          onEnterCommandCentre={() => { setShowHero(false); setShowBoot(true); }}
+        />
+      </div>
+    );
+  }
+
+  // Boot sequence overlay — plays after clicking "Enter Command Centre"
+  if (showBoot) {
+    return <BootSequence onComplete={() => setShowBoot(false)} />;
+  }
+
+  // Show initial skeleton only on first page load
+  if (initialLoading && !airQuality && cities.length === 0) {
+    return <InitialLoadingSkeleton />;
+  }
+
+  const renderSection = () => {
+    const section = (() => {
+      switch (activeSection) {
+        case 'dashboard': return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
+        case 'sources': return <SourceAttribution cityId={selectedCityId} />;
+        case 'forecast': return <PredictiveIntelligence cityId={selectedCityId} />;
+        case 'simulator': return <PolicySimulator cityId={selectedCityId} />;
+        case 'brief': return <ExecutiveBrief cityId={selectedCityId} />;
+        case 'advisory': return <CitizenAdvisory cityId={selectedCityId} />;
+        default: return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
+      }
+    })();
+    return <Suspense fallback={<ModuleFallback />}>{section}</Suspense>;
+  };
+
+  // Dashboard/command centre view
+  return (
+    <div className="flex h-screen bg-slate-50">
+      {/* Skip-to-content link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium"
+      >
+        Skip to main content
+      </a>
+
+      <Sidebar activeSection={activeSection} onSectionChange={handleNavigate} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top bar: mobile hamburger + Header */}
+        <div className="bg-white px-4 md:px-6 py-3 flex items-center gap-3 border-b border-slate-200">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            aria-label="Open navigation menu"
+          >
+            <Menu size={20} />
+          </button>
+          <Header
+            city={selectedCity}
+            airQuality={airQuality}
+            loading={aqLoading}
+            onRefresh={handleRefresh}
+            lastUpdated={lastUpdatedRef.current}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        </div>
+
+        <main id="main-content" className="flex-1 overflow-auto">
+          {/* City selector + India Map row */}
+          <div className="px-4 md:px-6 py-4 border-b border-slate-100 bg-white">
+            <div className="flex items-center justify-between mb-4">
+              <CitySelector cities={cities} selectedId={selectedCityId} onSelect={setSelectedCityId} />
+            </div>
+            <IndiaMap
+              cities={cities}
+              selectedId={selectedCityId}
+              airQualityMap={airQualityMap}
+              anomalyMap={anomalyMap}
+              onSelect={handleCitySelect}
+            />
+            {/* Impact section */}
+            <ImpactSection activeAnomalies={activeAnomalies} onNavigate={handleNavigate} />
+          </div>
+          <div className="px-4 md:px-6 pb-8 animate-fade-in">
+            {renderSection()}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 function InitialLoadingSkeleton() {
   return (
     <div className="flex h-screen bg-slate-50">
-      {/* Sidebar skeleton */}
       <div className="hidden md:flex w-56 bg-white border-r border-slate-200 flex-col">
         <div className="px-5 py-5 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -45,7 +236,6 @@ function InitialLoadingSkeleton() {
           ))}
         </div>
       </div>
-
       <div className="flex-1 flex flex-col min-w-0">
         <div className="bg-white px-6 py-3 flex items-center gap-3">
           <div className="skeleton w-8 h-8 rounded-lg md:hidden" />
@@ -64,7 +254,6 @@ function InitialLoadingSkeleton() {
             <div className="skeleton w-20 h-8 rounded-lg" />
           </div>
         </div>
-
         <main className="flex-1 overflow-auto">
           <div className="px-4 md:px-6 py-4 border-b border-slate-100 bg-white">
             <div className="skeleton w-40 h-5" />
@@ -86,99 +275,6 @@ function InitialLoadingSkeleton() {
                 ))}
               </div>
             </div>
-          </div>
-        </main>
-      </div>
-    </div>
-  );
-}
-
-export default function AppShell() {
-  const { cities } = useCities();
-  const [selectedCityId, setSelectedCityId] = useState<string>('delhi');
-  const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const lastUpdatedRef = useRef<string | null>(null);
-
-  const selectedCity = cities.find(c => c.id === selectedCityId) || null;
-  const { data: airQuality, loading: aqLoading, refresh: refreshAQ } = useAirQuality(selectedCity);
-
-  useEffect(() => {
-    if (airQuality) {
-      lastUpdatedRef.current = new Date().toISOString();
-      // Initial load complete once we have data
-      setInitialLoading(false);
-    }
-    // Also stop initial loading if cities are loaded but no data (edge case)
-    if (cities.length > 0 && selectedCity && !airQuality && !aqLoading) {
-      const timer = setTimeout(() => setInitialLoading(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [airQuality, cities, selectedCity, aqLoading]);
-
-  // Show initial skeleton only on first page load
-  if (initialLoading && !airQuality && cities.length === 0) {
-    return <InitialLoadingSkeleton />;
-  }
-
-  const handleRefresh = useCallback(() => {
-    refreshAQ();
-    lastUpdatedRef.current = new Date().toISOString();
-  }, [refreshAQ]);
-
-  const renderSection = () => {
-    const section = (() => {
-      switch (activeSection) {
-        case 'dashboard': return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
-        case 'sources': return <SourceAttribution cityId={selectedCityId} />;
-        case 'forecast': return <PredictiveIntelligence cityId={selectedCityId} />;
-        case 'simulator': return <PolicySimulator cityId={selectedCityId} />;
-        case 'brief': return <ExecutiveBrief cityId={selectedCityId} />;
-        case 'advisory': return <CitizenAdvisory cityId={selectedCityId} />;
-        default: return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
-      }
-    })();
-    return <Suspense fallback={<ModuleFallback />}>{section}</Suspense>;
-  };
-
-  return (
-    <div className="flex h-screen bg-slate-50">
-      {/* Skip-to-content link for accessibility */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium"
-      >
-        Skip to main content
-      </a>
-
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar: mobile hamburger + Header */}
-        <div className="bg-white px-4 md:px-6 py-3 flex items-center gap-3 border-b border-slate-200">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="md:hidden p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-            aria-label="Open navigation menu"
-          >
-            <Menu size={20} />
-          </button>
-          <Header
-            city={selectedCity}
-            airQuality={airQuality}
-            loading={aqLoading}
-            onRefresh={handleRefresh}
-            lastUpdated={lastUpdatedRef.current}
-          />
-        </div>
-
-        <main id="main-content" className="flex-1 overflow-auto">
-          <div className="px-4 md:px-6 py-4 border-b border-slate-100 bg-white">
-            <CitySelector cities={cities} selectedId={selectedCityId} onSelect={setSelectedCityId} />
-          </div>
-          <div className="px-4 md:px-6 pb-8 animate-fade-in">
-            {renderSection()}
           </div>
         </main>
       </div>

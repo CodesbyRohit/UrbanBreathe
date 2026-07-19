@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Clock } from 'lucide-react';
+import { RefreshCw, Clock, Sun, Moon } from 'lucide-react';
 import type { City, AirQualityData } from '../../types';
 import { formatAQI, getAQIColor, getAQILabel, timeAgo } from '../../utils/formatters';
 
@@ -9,9 +9,11 @@ interface HeaderProps {
   loading: boolean;
   onRefresh: () => void;
   lastUpdated: string | null;
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
 }
 
-export default function Header({ city, airQuality, loading, onRefresh, lastUpdated }: HeaderProps) {
+export default function Header({ city, airQuality, loading, onRefresh, lastUpdated, theme, onToggleTheme }: HeaderProps) {
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-4">
@@ -52,7 +54,16 @@ export default function Header({ city, airQuality, loading, onRefresh, lastUpdat
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {/* Theme toggle */}
+        <button
+          onClick={onToggleTheme}
+          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+
         {lastUpdated && (
           <span className="text-xs text-slate-400 flex items-center gap-1.5">
             <Clock size={12} />
