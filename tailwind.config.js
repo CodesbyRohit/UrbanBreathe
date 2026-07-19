@@ -20,6 +20,14 @@ export default {
           900: '#1e4482',
           950: '#152b50',
         },
+        /* AQI status badge colors — darkened from Tailwind defaults to meet WCAG AA 4.5:1 on white */
+        red: { 500: '#b91c1c' },
+        orange: { 500: '#c2410c' },
+        amber: { 500: '#b45309', 600: '#92400e' },
+        lime: { 600: '#4d7c0f' },
+        sky: { 500: '#0369a1', 600: '#0369a1' },
+        purple: { 500: '#7c3aed', 600: '#7c3aed' },
+        /* teal-600 darkened from #0d9488 (4.3:1) to #0f766e (5.5:1) for small text on white */
         teal: {
           50: '#effcf9',
           100: '#d7f7f0',
@@ -27,7 +35,7 @@ export default {
           300: '#7ae2cd',
           400: '#42cdb3',
           500: '#1fb09a',
-          600: '#148d7e',
+          600: '#0f766e',
           700: '#147166',
           800: '#155a53',
           900: '#164b46',

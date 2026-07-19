@@ -1,24 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* Light mode (default) contrast fix — override default Tailwind colors that fail WCAG AA
-   Previous fix only applied to .theme-dark; the default :root state used raw Tailwind defaults.
+/* Light mode contrast fix — only slate-400/500 MUST stay as CSS overrides because
+   they are used for both text (needs darkening) and bg/border (needs original value).
+   All other overrides are now in tailwind.config.js `theme.extend.colors`.
    text-slate-400 = #94a3b8 (2.8:1 on white ✗) → #475569 (5.8:1 ✓)
-   text-slate-500 = #64748b (4.1:1 on white ✗) → #334155 (7.6:1 ✓)
-   text-red-500 = #ef4444 (~3.0-3.8:1 on white ✗) → #b91c1c (5.5:1 ✓)
-   Dark mode overrides below (.theme-dark rules) have higher specificity and still apply. */
+   text-slate-500 = #64748b (4.1:1 on white ✗) → #475569 (7.6:1 ✓)
+   Dark mode overrides (.theme-dark) below have higher specificity. */
 .text-slate-400 { color: #475569; }
 .text-slate-500 { color: #475569; }
-.text-red-500 { color: #b91c1c; }
-.text-orange-500 { color: #c2410c; }
-.text-amber-500 { color: #b45309; }
-.text-amber-600 { color: #92400e; }
-.text-lime-600 { color: #4d7c0f; }
-.text-sky-500 { color: #0369a1; }
-.text-sky-600 { color: #0369a1; }
-.text-purple-500 { color: #7c3aed; }
-.text-purple-600 { color: #7c3aed; }
-.text-teal-600 { color: #0f766e; }
 @layer base {
   * {
     box-sizing: border-box;
