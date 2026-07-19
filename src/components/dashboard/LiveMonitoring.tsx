@@ -94,15 +94,27 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
           </div>
         </div>
 
-        <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <MetricCard label="Temperature" value={Math.round(airQuality.temperature)} unit="°C" icon={<Thermometer size={16} />} />
-          <MetricCard label="Humidity" value={Math.round(airQuality.humidity)} unit="%" icon={<Droplets size={16} />} />
-          <MetricCard label="Wind Speed" value={Math.round(airQuality.windSpeed * 10) / 10} unit="km/h" icon={<Wind size={16} />} subtitle={airQuality.windDirection} />
-          <MetricCard label="Visibility" value={airQuality.visibility?.toFixed(1) || '--'} unit="km" icon={<Eye size={16} />} />
-          <MetricCard label="Pressure" value={Math.round(airQuality.pressure)} unit="hPa" icon={<Gauge size={16} />} />
-          <MetricCard label="Wind Dir" value={airQuality.windDirection || '--'} icon={<Compass size={16} />} subtitle="Direction" />
-          <MetricCard label="PM2.5 / PM10" value={`${Math.round(airQuality.pm25)} / ${Math.round(airQuality.pm10)}`} unit="µg/m³" trend={airQuality.pm25 > 60 ? 'up' : 'down'} />
-          <MetricCard label="Overall AQI" value={formatAQI(airQuality.aqi)} color={aqiColor} trend={airQuality.aqi > 200 ? 'up' : airQuality.aqi > 100 ? 'stable' : 'down'} />
+        <div className="lg:col-span-2 space-y-3">
+          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-slate-300" />
+            Weather
+          </span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <MetricCard label="Temperature" value={Math.round(airQuality.temperature)} unit="°C" icon={<Thermometer size={16} />} />
+            <MetricCard label="Humidity" value={Math.round(airQuality.humidity)} unit="%" icon={<Droplets size={16} />} />
+            <MetricCard label="Wind Speed" value={Math.round(airQuality.windSpeed * 10) / 10} unit="km/h" icon={<Wind size={16} />} subtitle={airQuality.windDirection} />
+            <MetricCard label="Visibility" value={airQuality.visibility?.toFixed(1) || '--'} unit="km" icon={<Eye size={16} />} />
+          </div>
+          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-slate-300" />
+            Air Quality
+          </span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <MetricCard label="Pressure" value={Math.round(airQuality.pressure)} unit="hPa" icon={<Gauge size={16} />} />
+            <MetricCard label="Wind Dir" value={airQuality.windDirection || '--'} icon={<Compass size={16} />} subtitle="Direction" />
+            <MetricCard label="PM2.5 / PM10" value={`${Math.round(airQuality.pm25)} / ${Math.round(airQuality.pm10)}`} unit="µg/m³" trend={airQuality.pm25 > 60 ? 'up' : 'down'} />
+            <MetricCard label="Overall AQI" value={formatAQI(airQuality.aqi)} color={aqiColor} trend={airQuality.aqi > 200 ? 'up' : airQuality.aqi > 100 ? 'stable' : 'down'} />
+          </div>
         </div>
       </div>
 
@@ -119,9 +131,17 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
         </div>
       </div>
 
-      {/* Timeline Chart */}
+      {/* Timeline Chart — with clear takeaway */}
       <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">Today's AQI Trend</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-slate-700">Today's AQI Trend</h3>
+          <span className="text-[11px] text-slate-500 font-medium">
+            Peak: <span className="font-bold font-mono" style={{ color: aqiColor }}>198</span>
+            <span className="text-slate-400 mx-1">·</span>
+            Now: <span className="font-bold font-mono" style={{ color: aqiColor }}>{airQuality.aqi}</span>
+            <span className="text-slate-400 ml-1">{airQuality.aqi < 200 ? '↓ Improving' : '↑ Elevated'}</span>
+          </span>
+        </div>
         <ResponsiveContainer width="100%" height={200}>
           <AreaChart data={mockTimeline}>
             <defs>

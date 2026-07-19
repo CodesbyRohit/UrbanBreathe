@@ -9,6 +9,7 @@ interface IndiaMapProps {
   airQualityMap: Record<string, AirQualityData | null>;
   anomalyMap: Record<string, boolean>;
   onSelect: (id: string) => void;
+  compact?: boolean;
 }
 
 interface CityPosition {
@@ -49,12 +50,12 @@ const INDIA_OUTLINE = `M 142,8
   L 106,84 L 118,68 L 130,52 L 128,38 L 134,22 Z`;
 
 export default function IndiaMap({
-  cities, selectedId, airQualityMap, anomalyMap, onSelect,
+  cities, selectedId, airQualityMap, anomalyMap, onSelect, compact,
 }: IndiaMapProps) {
   const positions = useMemo(() => computeCityPositions(cities), [cities]);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-6">
+    <div className={`bg-white rounded-xl border border-slate-200 ${compact ? 'p-3' : 'p-4 md:p-6'}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <MapPin size={16} className="text-brand-500" />
@@ -209,6 +210,7 @@ export default function IndiaMap({
       </div>
 
       {/* City list below map (mobile-friendly) */}
+      {!compact && (
       <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-1.5">
         {positions.map(pos => {
           const city = cities.find(c => c.id === pos.id);
@@ -243,6 +245,7 @@ export default function IndiaMap({
           );
         })}
       </div>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import Header from './Header';
 import CitySelector from '../common/CitySelector';
 import IndiaMap from '../common/IndiaMap';
 import BootSequence from './BootSequence';
-import HeroSection from '../landing/HeroSection';
+import CompactLanding from '../landing/CompactLanding';
 import ImpactSection from '../landing/ImpactSection';
 import { Menu, Loader } from 'lucide-react';
 import type { NavSection } from '../../utils/constants';
@@ -38,8 +38,8 @@ export default function AppShell() {
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [showHero, setShowHero] = useState(true);
-  const [showBoot, setShowBoot] = useState(false);
+  const [showBoot, setShowBoot] = useState(true); // Boot sequence plays first
+  const [showLanding, setShowLanding] = useState(false);
   const lastUpdatedRef = useRef<string | null>(null);
   const { theme, toggleTheme, isDark } = useTheme();
 
@@ -93,7 +93,8 @@ export default function AppShell() {
 
   const handleNavigate = useCallback((section: NavSection) => {
     setActiveSection(section);
-    setShowHero(false);
+    setShowLanding(false);
+    setShowBoot(false);
     if (window.innerWidth < 768) setSidebarOpen(false);
   }, []);
 
@@ -118,24 +119,26 @@ export default function AppShell() {
     anomalyMap[id] = data?.anomaly?.isAnomaly ?? false;
   });
 
-  // Hero/landing section (before command centre) — shown first
-  if (showHero) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <HeroSection
-          cities={cities}
-          worstCity={worstCity}
-          activeAnomalies={activeAnomalies}
-          airQualityMap={airQualityMap}
-          onEnterCommandCentre={() => { setShowHero(false); setShowBoot(true); }}
-        />
-      </div>
-    );
-  }
-
-  // Boot sequence overlay — plays after clicking "Enter Command Centre"
+  // Boot sequence overlay — shown on first load
   if (showBoot) {
     return <BootSequence onComplete={() => setShowBoot(false)} />;
+  }
+
+  // Compact landing view — merges hero + stats + map + impact into one view
+  if (showLanding) {
+    return (
+      <CompactLanding
+        cities={cities}
+        selectedCityId={selectedCityId}
+        airQualityMap={airQualityMap}
+        anomalyMap={anomalyMap}
+        worstCity={worstCity}
+        activeAnomalies={activeAnomalies}
+        onSelectCity={handleCitySelect}
+        onEnterDashboard={() => { setShowLanding(false); }}
+        onNavigate={handleNavigate}
+      />
+    );
   }
 
   // Show initial skeleton only on first page load

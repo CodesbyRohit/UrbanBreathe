@@ -31,10 +31,10 @@ export default function MetricCard({
     trend === 'stable' ? 'text-slate-400' : '';
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition-all duration-200">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{label}</span>
-        {icon && <span className="text-slate-400">{icon}</span>}
+    <div className="bg-white rounded-xl border border-slate-200 p-3 hover:shadow-md hover:border-slate-300 transition-all duration-200">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">{label}</span>
+        {icon && <span className="text-slate-300">{icon}</span>}
       </div>
       <div className="flex items-baseline gap-1">
         <span
@@ -43,17 +43,17 @@ export default function MetricCard({
         >
           {value}
         </span>
-        {unit && <span className="text-xs text-slate-500 font-medium">{unit}</span>}
+        {unit && <span className="text-[10px] text-slate-400 font-medium">{unit}</span>}
       </div>
       {(trend || subtitle) && (
-        <div className="flex items-center gap-3 mt-1">
+        <div className="flex items-center gap-2 mt-0.5">
           {trend && (
-            <span className={`flex items-center gap-0.5 text-xs font-medium ${trendColor}`}>
+            <span className={`flex items-center gap-0.5 text-[10px] font-medium ${trendColor}`}>
               {trendIcon}
               {trendLabel || trend}
             </span>
           )}
-          {subtitle && <span className="text-[11px] text-slate-400">{subtitle}</span>}
+          {subtitle && <span className="text-[10px] text-slate-400">{subtitle}</span>}
         </div>
       )}
     </div>
