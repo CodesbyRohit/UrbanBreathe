@@ -47,7 +47,7 @@ const INDIA_OUTLINE = `M 139.36,39.13 L 142.51,39.19 L 145.76,52.74 L 154.21,57.
  * Compute label offset for nearby cities to prevent overlap.
  * Returns { dy: number, anchor: string } — vertical offset in px and text-anchor.
  */
-function getLabelOffset(pos: CityPosition, allPositions: CityPosition[]): { dy: number; anchor: string } {
+function getLabelOffset(pos: CityPosition, allPositions: CityPosition[]): { dy: number; anchor: 'start' | 'middle' | 'end' } {
   const threshold = 18; // px — minimum vertical distance before we offset
   for (const other of allPositions) {
     if (other.id === pos.id) continue;
