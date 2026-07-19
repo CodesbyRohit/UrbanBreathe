@@ -68,7 +68,7 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
   }));
 
   const trendIcon = data.trend === 'Improving' ? <ArrowDown size={14} /> :
-    data.trend === 'Deteriorating' ? <ArrowUp size={14} className="text-red-500" /> :
+    data.trend === 'Deteriorating' ? <ArrowUp size={14} className="text-red-600" /> :
     <Minus size={14} />;
 
   return (
@@ -143,16 +143,15 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
                     <p className="font-semibold text-slate-900">{label}</p>
                     <p className="text-slate-600 mt-1">
                       AQI: <strong>{d.aqi}</strong> ({getAQILabel(d.aqi)})
-                    </p>
-                    {isPredicted && <p className="text-orange-500 text-[10px] font-medium">Forecast</p>}
+                    </p>                      {isPredicted && <p className="text-[#9a3412] text-[10px] font-medium">Forecast</p>}
                     <p className="text-slate-500">PM2.5: {d.pm25} µg/m³</p>
                     <p className="text-slate-400">Confidence: {d.confidence}%</p>
                   </div>
                 );
               }}
             />
-            <ReferenceLine y={200} stroke="#c2410c" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Poor', fontSize: 10, fill: '#c2410c', position: 'right' }} />
-            <ReferenceLine y={300} stroke="#b91c1c" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Very Poor', fontSize: 10, fill: '#b91c1c', position: 'right' }} />
+            <ReferenceLine y={200} stroke="#9a3412" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Poor', fontSize: 10, fill: '#9a3412', position: 'right' }} />
+            <ReferenceLine y={300} stroke="#7f1d1d" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Very Poor', fontSize: 10, fill: '#7f1d1d', position: 'right' }} />
 
             {/* Confidence band for predicted portion */}
             {splitIndex > 0 && (
@@ -220,7 +219,7 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
                   <tr key={i} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${isPredicted ? 'opacity-85' : ''}`}>
                     <td className="px-5 py-3 font-medium text-slate-800">
                       {f.hour}
-                      {isPredicted && <span className="ml-1.5 text-[10px] text-orange-500 font-normal">(forecast)</span>}
+                      {isPredicted && <span className="ml-1.5 text-[10px] text-[#c2410c] font-normal">(forecast)</span>}
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-semibold font-mono" style={{ color: f.color }}>{f.aqi}</span>

@@ -13,6 +13,8 @@ export default function CitySelector({ cities, selectedId, onSelect }: CitySelec
     <div className="flex items-center gap-2">
       <MapPin size={14} className="text-slate-400" />
       <select
+        id="city-selector"
+        name="city"
         value={selectedId}
         onChange={e => onSelect(e.target.value)}
         aria-label="Select a city"

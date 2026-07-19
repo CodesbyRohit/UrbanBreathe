@@ -10,12 +10,12 @@ interface AQIGaugeProps {
 }
 
 function getSeverityIcon(aqi: number): React.ReactNode {
-  if (aqi <= 50) return <Smile size={14} className="text-green-600" />;
-  if (aqi <= 100) return <CheckCircle size={14} className="text-lime-600" />;
-  if (aqi <= 200) return <AlertCircle size={14} className="text-yellow-600" />;
-  if (aqi <= 300) return <AlertTriangle size={14} className="text-orange-600" />;
-  if (aqi <= 400) return <AlertTriangle size={14} className="text-red-600" />;
-  return <Skull size={14} className="text-purple-600" />;
+  if (aqi <= 50) return <Smile size={14} className="text-green-700" />;
+  if (aqi <= 100) return <CheckCircle size={14} className="text-lime-700" />;
+  if (aqi <= 200) return <AlertCircle size={14} className="text-yellow-700" />;
+  if (aqi <= 300) return <AlertTriangle size={14} className="text-orange-700" />;
+  if (aqi <= 400) return <AlertTriangle size={14} className="text-red-700" />;
+  return <Skull size={14} className="text-purple-700" />;
 }
 
 function getSeverityPattern(aqi: number): string {

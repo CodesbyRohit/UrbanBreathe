@@ -126,7 +126,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
       {/* Pollutants Grid */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-slate-700">Pollutant Concentrations</h3>
+          <h2 className="text-sm font-semibold text-slate-700">Pollutant Concentrations</h2>
           <span className="text-[10px] text-slate-500 uppercase tracking-wider">All values in µg/m³ or ppb</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -139,7 +139,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
       {/* Timeline Chart — with clear takeaway */}
       <div className="bg-white rounded-xl border border-slate-200 p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-slate-700">Today's AQI Trend</h3>
+          <h2 className="text-sm font-semibold text-slate-700">Today's AQI Trend</h2>
           <span className="text-[11px] text-slate-500 font-medium">
             Peak: <span className="font-bold font-mono" style={{ color: aqiColor }}>198</span>
             <span className="text-slate-500 mx-1">·</span>
@@ -167,7 +167,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
       {/* Health & City Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">City Health Metrics</h3>
+          <h2 className="text-sm font-semibold text-slate-700 mb-3">City Health Metrics</h2>
           <div className="space-y-2 text-sm text-slate-600">
             <div className="flex justify-between py-1.5 border-b border-slate-50 last:border-0">
               <span className="text-slate-500">Population</span>
@@ -188,7 +188,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
           </div>
         </div>
         <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Environmental Intelligence</h3>
+          <h2 className="text-sm font-semibold text-slate-700 mb-3">Environmental Intelligence</h2>
           <div className="space-y-2">
             {airQuality.aqi > 200 && (
               <div className="px-3 py-2 bg-red-50 text-red-700 rounded-lg text-xs font-medium flex items-center gap-2 border border-red-100">

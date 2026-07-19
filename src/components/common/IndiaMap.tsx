@@ -113,9 +113,8 @@ export default function IndiaMap({
           <path
             d={INDIA_OUTLINE}
             fill="none"
-            stroke="#cbd5e1"
-            strokeWidth="1.5"
-            className="theme-light:stroke-slate-300"
+            stroke="#64748b"
+            strokeWidth="1"
           />
 
           {/* City markers */}
@@ -169,9 +168,9 @@ export default function IndiaMap({
                     cy={pos.y}
                     r="8"
                     fill="none"
-                    stroke="#3b91e8"
+                    stroke="#2675dc"
                     strokeWidth="2"
-                    opacity={0.5}
+                    opacity={0.8}
                   />
                 )}
 
@@ -202,7 +201,7 @@ export default function IndiaMap({
                       y={pos.y + offset.dy}
                       textAnchor={offset.anchor}
                       className={`text-[9px] font-semibold fill-slate-600 ${
-                        isSelected ? 'fill-brand-600 font-bold' : ''
+                        isSelected ? 'fill-brand-700 font-bold' : ''
                       }`}
                     >
                       {pos.name}
@@ -233,9 +232,9 @@ export default function IndiaMap({
           })}
 
           {/* Scale bar */}
-          <line x1="20" y1="480" x2="80" y2="480" stroke="#94a3b8" strokeWidth="1" />
-          <line x1="20" y1="476" x2="20" y2="484" stroke="#94a3b8" strokeWidth="1" />
-          <line x1="80" y1="476" x2="80" y2="484" stroke="#94a3b8" strokeWidth="1" />
+          <line x1="20" y1="480" x2="80" y2="480" stroke="#64748b" strokeWidth="1" />
+          <line x1="20" y1="476" x2="20" y2="484" stroke="#64748b" strokeWidth="1" />
+          <line x1="80" y1="476" x2="80" y2="484" stroke="#64748b" strokeWidth="1" />
           <text x="50" y="475" textAnchor="middle" className="text-[8px] fill-slate-600">
             500 km
           </text>

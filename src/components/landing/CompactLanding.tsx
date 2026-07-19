@@ -47,7 +47,7 @@ const IMPACT_CARDS = [
     desc: 'Hospital admissions averted',
     action: 'Run simulation',
     section: 'simulator' as NavSection,
-    color: 'text-teal-600',
+    color: 'text-teal-700',
     bg: 'bg-teal-50',
     border: 'border-teal-200 hover:border-teal-400',
   },
@@ -57,7 +57,7 @@ const IMPACT_CARDS = [
     desc: 'Briefs in seconds, not hours',
     action: 'View report',
     section: 'brief' as NavSection,
-    color: 'text-brand-600',
+    color: 'text-brand-700',
     bg: 'bg-brand-50',
     border: 'border-brand-200 hover:border-brand-400',
   },
@@ -129,12 +129,12 @@ export default function CompactLanding({
 
           {/* Right: Stats strip */}
           <div className="lg:w-1/2 grid grid-cols-2 gap-2">
-            <StatCard label="Cities" value={String(cities.length)} sub="Across India" color="#3b91e8" />
+            <StatCard label="Cities" value={String(cities.length)} sub="Across India" color="#2563eb" />
             <StatCard
               label="Worst AQI"
               value={worstCity ? String(worstCity.aqi) : '--'}
               sub={worstCity?.name || 'N/A'}
-              color={worstCity ? getAQIColor(worstCity.aqi) : '#94a3b8'}
+              color={worstCity ? getAQIColor(worstCity.aqi) : '#475569'}
             />
             <StatCard
               label="Anomalies"
@@ -142,7 +142,7 @@ export default function CompactLanding({
               sub="Active events"
               color={activeAnomalies > 0 ? '#b91c1c' : '#15803d'}
             />
-            <StatCard label="Data Source" value="Open-Meteo" sub="Real-time API" color="#65a30d" />
+            <StatCard label="Data Source" value="Open-Meteo" sub="Real-time API" color="#4d7c0f" />
           </div>
         </div>
 
@@ -170,8 +170,8 @@ export default function CompactLanding({
             {/* CTA button spans the 2-column grid */}
             <button
               onClick={handleEnterDashboard}
-              className="col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-500 text-white text-xs font-semibold rounded-lg
-                hover:bg-brand-600 transition-all duration-200 shadow-sm hover:shadow-md mt-1"
+              className="col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-700 text-white text-xs font-semibold rounded-lg
+                hover:bg-brand-800 transition-all duration-200 shadow-sm hover:shadow-md mt-1"
             >
               Enter Command Centre
               <ArrowRight size={14} />
