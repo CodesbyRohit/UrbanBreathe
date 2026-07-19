@@ -53,6 +53,16 @@ export default function IndiaMap({
   cities, selectedId, airQualityMap, anomalyMap, onSelect, compact,
 }: IndiaMapProps) {
   const positions = useMemo(() => computeCityPositions(cities), [cities]);
+  // Memoized per-city AQI colors — avoids re-calling getAQIColor on every render
+  const cityColors = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const city of cities) {
+      const aqData = airQualityMap[city.id];
+      const aqi = aqData?.aqi ?? city.baseAQI ?? 150;
+      map[city.id] = getAQIColor(aqi);
+    }
+    return map;
+  }, [cities, airQualityMap]);
 
   return (
     <div className={`bg-white rounded-xl border border-slate-200 ${compact ? 'p-3' : 'p-4 md:p-6'}`}>
@@ -97,7 +107,7 @@ export default function IndiaMap({
             const aqi = aqData?.aqi ?? (city?.baseAQI ?? 150);
             const isAnomaly = anomalyMap[pos.id] ?? false;
             const isSelected = pos.id === selectedId;
-            const color = getAQIColor(aqi);
+            const color = cityColors[pos.id];
 
             return (
               <g
@@ -218,7 +228,7 @@ export default function IndiaMap({
           const aqi = aqData?.aqi ?? (city?.baseAQI ?? 150);
           const isAnomaly = anomalyMap[pos.id] ?? false;
           const isSelected = pos.id === selectedId;
-          const color = getAQIColor(aqi);
+          const color = cityColors[pos.id];
 
           return (
             <button

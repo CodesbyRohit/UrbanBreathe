@@ -234,7 +234,7 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${f.confidence}%`, backgroundColor: f.confidence > 70 ? '#16a34a' : f.confidence > 50 ? '#eab308' : '#ef4444' }} />
+                          <div className="h-full rounded-full transition-all" style={{ width: `${f.confidence}%`,                        backgroundColor: f.confidence > 70 ? '#15803d' : f.confidence > 50 ? '#a16207' : '#b91c1c' }} />
                         </div>
                         <span className="text-xs text-slate-500 font-mono">{f.confidence}%</span>
                       </div>
