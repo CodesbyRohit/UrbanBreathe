@@ -90,7 +90,12 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
                 </span>
               </div>
             )}
-            <span className="text-[11px] text-slate-400">Data source: {airQuality.dataSource || 'Open-Meteo / Fallback'}</span>
+            <span className="flex items-center gap-1.5 text-[11px]">
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${airQuality.dataSource === 'fallback' ? 'bg-amber-500' : 'bg-teal-500'}`} />
+              <span className={airQuality.dataSource === 'fallback' ? 'text-amber-600 font-medium' : 'text-slate-400'}>
+                {airQuality.dataSource === 'fallback' ? 'Using fallback data — API unavailable' : 'Open-Meteo (Live)'}
+              </span>
+            </span>
           </div>
         </div>
 

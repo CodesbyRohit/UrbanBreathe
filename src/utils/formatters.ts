@@ -49,6 +49,7 @@ export function getAQIBg(aqi: number): string {
 }
 
 export function getAQILabel(aqi: number): string {
+  if (aqi == null || isNaN(aqi)) return 'Unknown';
   if (aqi <= 50) return 'Good';
   if (aqi <= 100) return 'Satisfactory';
   if (aqi <= 200) return 'Moderate';

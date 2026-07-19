@@ -74,6 +74,7 @@ export default function Header({ city, airQuality, loading, onRefresh, lastUpdat
           onClick={onRefresh}
           disabled={loading}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
+          aria-label="Refresh air quality data"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           {loading ? 'Updating...' : 'Refresh'}

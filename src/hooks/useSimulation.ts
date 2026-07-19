@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { Intervention, SimulationResult } from '../types';
 import { getInterventions, runSimulation } from '../services/api';
 
@@ -27,8 +27,13 @@ export function useSimulation() {
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const runningRef = useRef(false);
 
   const simulate = useCallback(async (cityId: string, selected: string[]) => {
+    // Prevent duplicate/overlapping runs
+    if (runningRef.current) return;
+    runningRef.current = true;
+
     setLoading(true);
     setError(null);
     try {
@@ -38,6 +43,7 @@ export function useSimulation() {
       setError(err.message);
     } finally {
       setLoading(false);
+      runningRef.current = false;
     }
   }, []);
 

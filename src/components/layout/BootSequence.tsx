@@ -194,9 +194,9 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
         ))}
       </div>
 
-      {/* Skip hint */}
-      <p className="absolute bottom-8 text-[11px] text-slate-600 font-mono animate-fade-in" style={{ animationDelay: '1.5s' }}>
-        Click anywhere or press any key to skip
+      {/* Skip hint - positioned to be reachable and visible on mobile */}
+      <p className="fixed left-1/2 -translate-x-1/2 bottom-6 md:bottom-8 text-[11px] text-slate-600 font-mono animate-fade-in px-4 py-2 bg-slate-900/80 rounded-full backdrop-blur-sm whitespace-nowrap" style={{ animationDelay: '1.5s' }}>
+        Tap or press any key to skip
       </p>
     </div>
   );

@@ -8,16 +8,25 @@ UrbanBreathe is an AI-powered operational platform designed for Smart City Comma
 
 ---
 
+## Live Demo
+
+[https://urban-breathe-nine.vercel.app](https://urban-breathe-nine.vercel.app)
+
+---
+
 ## Features
 
+### 0. AI Boot Sequence
+Full-screen JARVIS-style intro overlay on first load with rotating HUD ring, typewriter status lines, and cross-fade transition. Plays once per session (sessionStorage), skippable.
+
 ### 1. Live Environmental Monitoring
-Real-time AQI dashboard with PM2.5, PM10, NO₂, O₃, SO₂, CO readings, weather conditions (temperature, humidity, wind, pressure, visibility), interactive AQI gauge, pollutant concentration grid, and timeline chart for trend analysis.
+Real-time AQI dashboard with PM2.5, PM10, NO₂, O₃, SO₂, CO readings, weather conditions (temperature, humidity, wind, pressure, visibility), interactive AQI gauge, pollutant concentration grid, timeline chart for trend analysis, and anomaly detection badges.
 
 ### 2. AI Source Attribution
 Explainable AI engine that estimates pollution contributions from traffic, industry, biomass burning, dust/construction, and other sources — with confidence scores, seasonal adjustment, and science-based mitigation recommendations.
 
 ### 3. Predictive Intelligence
-72-hour AQI forecasting system using diurnal cycle modeling, seasonal trend analysis, and confidence scoring. Helps authorities prepare before pollution events occur. Includes a detailed hourly forecast table with alerts.
+72-hour AQI forecasting system using diurnal cycle modeling, seasonal trend analysis, and confidence scoring. Helps authorities prepare before pollution events occur. Includes a detailed hourly forecast table with alerts and confidence bands.
 
 ### 4. Policy Intervention Simulator
 Test 8 different policy interventions (construction ban, industrial restrictions, heavy vehicle diversion, public transit, dust suppression, urban greening, odd-even scheme, biomass burning ban). Project AQI improvements, PM2.5 reduction, hospital admissions averted, population exposure, and implementation cost — all in real-time.
@@ -223,5 +232,22 @@ cp .env.example .env
 | `PORT` | `3001` | Backend server port |
 
 Open-Meteo APIs are free and require no API key.
+
+---
+
+## Known Limitations
+
+- **Data source**: Uses Open-Meteo as a data proxy. A production deployment would integrate CPCB (Central Pollution Control Board) live feeds directly for higher accuracy and lower latency.
+- **City coverage**: Currently supports 10 major Indian cities. Expanding to additional cities requires adding city coordinates and baseline AQI data.
+- **Forecast accuracy**: Forecasting uses diurnal cycle modeling with seasonal adjustment. For production use, this should be augmented with ML-based ensemble models trained on historical data.
+- **Source attribution**: AI source attribution uses multi-factor pollutant correlation. Real-world deployments would supplement with satellite imagery analysis and local emissions inventories.
+- **Mobile optimization**: Desktop-optimized for command centre use. The app is usable on mobile but some data-dense views (forecast table, pollutant grid) are best viewed on larger screens.
+- **Offline support**: No offline mode — the app requires an active internet connection to fetch data from the backend API.
+
+---
+
+## License
+
+MIT — Built for ET AI Hackathon 2.0
 
 
