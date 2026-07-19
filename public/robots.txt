@@ -1,5 +1,4 @@
 User-agent: *
-Disallow: /
+Allow: /
 
-# UrbanBreathe — ET AI Hackathon 2.0 prototype
-# Blocked from crawl to prevent indexing of demo/pre-release content.
+Sitemap: https://urban-breathe-nine.vercel.app/sitemap.xml
