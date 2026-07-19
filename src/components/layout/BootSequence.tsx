@@ -1,12 +1,36 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 
-const STATUS_LINES = [
-  { text: 'INITIALIZING URBANBREATHE...', delay: 200 },
-  { text: 'CONNECTING TO ATMOSPHERIC SENSORS ACROSS 10 CITIES...', delay: 600 },
-  { text: 'AI SOURCE ATTRIBUTION ENGINE: ONLINE', delay: 1100 },
-  { text: 'ANOMALY DETECTION: CALIBRATED', delay: 1500 },
-  { text: 'WELCOME, COMMANDER.', delay: 2000 },
+const STATUS_LINES: {
+  displayText: string;
+  speechText?: string;
+  delay: number;
+}[] = [
+  {
+    displayText: 'INITIALIZING URBANBREATHE...',
+    speechText: 'Initializing UrbanBreathe.',
+    delay: 200,
+  },
+  {
+    displayText: 'CONNECTING TO ATMOSPHERIC SENSORS ACROSS 10 CITIES...',
+    speechText: 'Connecting to atmospheric sensors across 10 cities.',
+    delay: 600,
+  },
+  {
+    displayText: 'AI SOURCE ATTRIBUTION ENGINE: ONLINE',
+    speechText: 'AI source attribution engine, online.',
+    delay: 1100,
+  },
+  {
+    displayText: 'ANOMALY DETECTION: CALIBRATED',
+    speechText: 'Anomaly detection, calibrated.',
+    delay: 1500,
+  },
+  {
+    displayText: 'WELCOME, COMMANDER.',
+    speechText: 'Welcome, commander.',
+    delay: 2000,
+  },
 ];
 
 const STORAGE_KEY = 'urbanbreathe_boot_played';
@@ -104,9 +128,10 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
     if (voiceMutedRef.current) return;
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     const chars = typewriterCharsRef.current[index] ?? 0;
-    if (chars >= STATUS_LINES[index].text.length && !spokenLinesRef.current.has(index)) {
+    if (chars >= STATUS_LINES[index].displayText.length && !spokenLinesRef.current.has(index)) {
       spokenLinesRef.current.add(index);
-      window.speechSynthesis.speak(buildUtterance(STATUS_LINES[index].text));
+      const line = STATUS_LINES[index];
+      window.speechSynthesis.speak(buildUtterance(line.speechText ?? line.displayText));
     }
   }
 
@@ -128,9 +153,9 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
       // would race with the new speak() calls and can swallow audio.
       for (let i = 0; i < STATUS_LINES.length; i++) {
         const chars = typewriterChars[i] ?? 0;
-        if (chars >= STATUS_LINES[i].text.length && !spokenLinesRef.current.has(i)) {
+        if (chars >= STATUS_LINES[i].displayText.length && !spokenLinesRef.current.has(i)) {
           spokenLinesRef.current.add(i);
-          window.speechSynthesis.speak(buildUtterance(STATUS_LINES[i].text));
+          window.speechSynthesis.speak(buildUtterance(STATUS_LINES[i].speechText ?? STATUS_LINES[i].displayText));
         }
       }
     }
@@ -157,7 +182,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
             return updated;
           });
           typewriterCharsRef.current[index] = charIndex;
-          if (charIndex >= line.text.length) {
+          if (charIndex >= line.displayText.length) {
             clearInterval(typeInterval);
             // Speak completed line directly from timer callback
             speakLineIfCompleted(index);
@@ -290,12 +315,12 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
             {visibleLines.includes(index) && (
               <span className="flex items-center gap-2">
                 <span className="text-brand-400">
-                  {line.text.substring(0, typewriterChars[index] || 0)}
-                  {(typewriterChars[index] || 0) < line.text.length && (
+                  {line.displayText.substring(0, typewriterChars[index] || 0)}
+                  {(typewriterChars[index] || 0) < line.displayText.length && (
                     <span className="inline-block w-2 h-4 bg-brand-400 animate-pulse ml-0.5 align-middle" />
                   )}
                 </span>
-                {typewriterChars[index] >= line.text.length && (
+                {typewriterChars[index] >= line.displayText.length && (
                   <span className="text-teal-400 text-xs">[OK]</span>
                 )}
               </span>
