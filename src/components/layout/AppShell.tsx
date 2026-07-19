@@ -4,6 +4,7 @@ import Header from './Header';
 import CitySelector from '../common/CitySelector';
 import IndiaMap from '../common/IndiaMap';
 import BootSequence from './BootSequence';
+import InitGate from './InitGate';
 import CompactLanding from '../landing/CompactLanding';
 import ImpactSection from '../landing/ImpactSection';
 import { Menu, Loader } from 'lucide-react';
@@ -40,7 +41,8 @@ export default function AppShell() {
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [showBoot, setShowBoot] = useState(true); // Boot sequence plays first
+  const [showInitGate, setShowInitGate] = useState(() => !sessionStorage.getItem('urbanbreathe_boot_played'));
+  const [showBoot, setShowBoot] = useState(false);
   const [showLanding, setShowLanding] = useState(false);
   const lastUpdatedRef = useRef<string | null>(null);
   const { theme, toggleTheme, isDark } = useTheme();
@@ -121,7 +123,11 @@ export default function AppShell() {
     anomalyMap[id] = data?.anomaly?.isAnomaly ?? false;
   });
 
-  // Boot sequence overlay — shown on first load
+  // InitGate → BootSequence → CompactLanding → Dashboard
+  if (showInitGate) {
+    return <InitGate onTap={() => { setShowInitGate(false); setShowBoot(true); }} />;
+  }
+
   if (showBoot) {
     return <BootSequence onComplete={() => setShowBoot(false)} />;
   }
