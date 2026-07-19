@@ -39,6 +39,16 @@ export function getAQIColor(aqi: number): string {
   return '#6d28d9';
 }
 
+/** Lighter AQI color variants for use on dark backgrounds (e.g., dark mode) */
+export function getAQIColorLight(aqi: number): string {
+  if (aqi <= 50) return '#22c55e';
+  if (aqi <= 100) return '#84cc16';
+  if (aqi <= 200) return '#facc15';
+  if (aqi <= 300) return '#fb923c';
+  if (aqi <= 400) return '#f87171';
+  return '#a78bfa';
+}
+
 export function getAQIBg(aqi: number): string {
   if (aqi <= 50) return '#dcfce7';
   if (aqi <= 100) return '#ecfccb';

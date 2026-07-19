@@ -1,7 +1,7 @@
 import React from 'react';
 import { RefreshCw, Clock, Sun, Moon } from 'lucide-react';
 import type { City, AirQualityData } from '../../types';
-import { formatAQI, getAQIColor, getAQILabel, timeAgo } from '../../utils/formatters';
+import { formatAQI, getAQIColor, getAQIColorLight, getAQILabel, timeAgo } from '../../utils/formatters';
 
 interface HeaderProps {
   city: City | null;
@@ -14,6 +14,10 @@ interface HeaderProps {
 }
 
 export default function Header({ city, airQuality, loading, onRefresh, lastUpdated, theme, onToggleTheme }: HeaderProps) {
+  const effectiveAqiColor = airQuality
+    ? (theme === 'dark' ? getAQIColorLight(airQuality.aqi) : getAQIColor(airQuality.aqi))
+    : undefined;
+
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-4">
@@ -23,14 +27,14 @@ export default function Header({ city, airQuality, loading, onRefresh, lastUpdat
               <h1 className="text-base font-semibold text-slate-900">{city.name}</h1>
               <p className="text-xs text-slate-500">{city.state} • Pop: {city.population}</p>
             </div>
-            {airQuality && (
+            {airQuality && effectiveAqiColor && (
               <>
                 <div className="h-8 w-px bg-slate-200" />
                 <div className="flex items-center gap-3">
                   <div className="text-center">
                     <div
                       className="text-2xl font-bold leading-none"
-                      style={{ color: getAQIColor(airQuality.aqi) }}
+                      style={{ color: effectiveAqiColor }}
                     >
                       {formatAQI(airQuality.aqi)}
                     </div>
@@ -41,8 +45,8 @@ export default function Header({ city, airQuality, loading, onRefresh, lastUpdat
                   <span
                     className="px-2 py-0.5 rounded text-[11px] font-semibold"
                     style={{
-                      backgroundColor: getAQIColor(airQuality.aqi) + '15',
-                      color: getAQIColor(airQuality.aqi),
+                      backgroundColor: effectiveAqiColor + '15',
+                      color: effectiveAqiColor,
                     }}
                   >
                     {getAQILabel(airQuality.aqi)}
