@@ -156,8 +156,8 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={40} />
+            <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#475569' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: '#475569' }} axisLine={false} tickLine={false} width={40} />
             <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
             <Area type="monotone" dataKey="aqi" stroke={aqiColor} strokeWidth={2} fill="url(#aqiGradient)" />
           </AreaChart>

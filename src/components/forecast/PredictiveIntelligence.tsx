@@ -127,12 +127,12 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
             <XAxis
               dataKey="time"
-              tick={{ fontSize: 11, fill: '#94a3b8' }}
+              tick={{ fontSize: 10, fill: '#475569' }}
               axisLine={false}
               tickLine={false}
               interval={1}
             />
-            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={40} />
+            <YAxis tick={{ fontSize: 10, fill: '#475569' }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={40} />
             <Tooltip
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
@@ -151,8 +151,8 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
                 );
               }}
             />
-            <ReferenceLine y={200} stroke="#f97316" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Poor', fontSize: 10, fill: '#f97316', position: 'right' }} />
-            <ReferenceLine y={300} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Very Poor', fontSize: 10, fill: '#ef4444', position: 'right' }} />
+            <ReferenceLine y={200} stroke="#c2410c" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Poor', fontSize: 10, fill: '#c2410c', position: 'right' }} />
+            <ReferenceLine y={300} stroke="#b91c1c" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Very Poor', fontSize: 10, fill: '#b91c1c', position: 'right' }} />
 
             {/* Confidence band for predicted portion */}
             {splitIndex > 0 && (

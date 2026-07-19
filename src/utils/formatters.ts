@@ -31,12 +31,12 @@ export function formatNumber(num: number): string {
 }
 
 export function getAQIColor(aqi: number): string {
-  if (aqi <= 50) return '#16a34a';
-  if (aqi <= 100) return '#65a30d';
-  if (aqi <= 200) return '#eab308';
-  if (aqi <= 300) return '#f97316';
-  if (aqi <= 400) return '#ef4444';
-  return '#7c3aed';
+  if (aqi <= 50) return '#15803d';
+  if (aqi <= 100) return '#4d7c0f';
+  if (aqi <= 200) return '#a16207';
+  if (aqi <= 300) return '#c2410c';
+  if (aqi <= 400) return '#b91c1c';
+  return '#6d28d9';
 }
 
 export function getAQIBg(aqi: number): string {

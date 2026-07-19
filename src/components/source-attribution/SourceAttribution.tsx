@@ -115,7 +115,7 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
           <h3 className="text-sm font-semibold text-slate-700 mb-4">Source Contribution (%)</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
-              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: '#475569' }} />
               <YAxis dataKey="name" type="category" tick={{ fontSize: 12, fill: '#475569' }} width={110} />
               <Tooltip
                 content={({ active, payload }) => {

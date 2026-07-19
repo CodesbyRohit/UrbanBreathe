@@ -59,7 +59,7 @@ export default function IndiaMap({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <MapPin size={16} className="text-brand-500" />
-          <h3 className="text-sm font-semibold text-slate-700">City Network</h3>
+          <h2 className="text-sm font-semibold text-slate-700">City Network</h2>
         </div>
         <div className="flex items-center gap-3 text-[10px] text-slate-400">
           <span className="flex items-center gap-1">
@@ -203,7 +203,7 @@ export default function IndiaMap({
           <line x1="20" y1="480" x2="80" y2="480" stroke="#94a3b8" strokeWidth="1" />
           <line x1="20" y1="476" x2="20" y2="484" stroke="#94a3b8" strokeWidth="1" />
           <line x1="80" y1="476" x2="80" y2="484" stroke="#94a3b8" strokeWidth="1" />
-          <text x="50" y="475" textAnchor="middle" className="text-[8px] fill-slate-400">
+          <text x="50" y="475" textAnchor="middle" className="text-[8px] fill-slate-600">
             500 km
           </text>
         </svg>
