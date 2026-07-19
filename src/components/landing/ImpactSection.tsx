@@ -84,21 +84,21 @@ export default function ImpactSection({ activeAnomalies, onNavigate }: ImpactSec
             </div>
 
             <div className="flex items-center gap-2 mb-1.5">
-              <h3 className="text-sm font-bold text-slate-800">{card.title}</h3>
+              <h3 className="text-sm font-bold text-[#1e293b]">{card.title}</h3>
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ${
                 card.title === 'Early Warning' && activeAnomalies > 0
                   ? 'bg-red-200 text-red-800'
-                  : 'bg-white/60 text-slate-500'
+                  : 'bg-white/60 text-[#334155]'
               }`}>
                 {card.metric}
               </span>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed mb-3">{card.description}</p>
+            <p className="text-xs text-[#475569] leading-relaxed mb-3">{card.description}</p>
             
-            <p className="text-[11px] text-slate-400 leading-relaxed mb-3">{card.detail}</p>
+            <p className="text-[11px] text-[#64748b] leading-relaxed mb-3">{card.detail}</p>
 
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 group-hover:text-brand-600 transition-colors">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#334155] group-hover:text-brand-600 transition-colors">
               Open {card.title === 'Early Warning' ? 'Live Monitoring' : 
                      card.title === 'Operational Efficiency' ? 'Executive Brief' :
                      card.title === 'Explainability' ? 'Source Attribution' : 'Policy Simulator'}
