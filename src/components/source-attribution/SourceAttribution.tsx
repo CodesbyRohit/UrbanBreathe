@@ -127,7 +127,7 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
                       <p className="text-slate-600 mt-1">Contribution: <strong>{d.value}%</strong></p>
                       <p className="text-slate-500">Confidence: {d.confidence}%</p>
                       <p className="text-slate-400 mt-1">{d.description}</p>
-                      <p className="text-brand-600 mt-1 text-[10px] font-medium">{d.mitigation}</p>
+                      <p className="text-brand-700 mt-1 text-[10px] font-medium">{d.mitigation}</p>
                     </div>
                   );
                 }}

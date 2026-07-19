@@ -1,7 +1,7 @@
 export const AQI_COLORS = {
   Good: { color: '#15803d', bg: '#dcfce7' },
   Satisfactory: { color: '#4d7c0f', bg: '#ecfccb' },
-  Moderate: { color: '#a16207', bg: '#fef9c3' },
+  Moderate: { color: '#854d0e', bg: '#fef9c3' },
   Poor: { color: '#c2410c', bg: '#ffedd5' },
   'Very Poor': { color: '#b91c1c', bg: '#fee2e2' },
   Severe: { color: '#6d28d9', bg: '#f3e8ff' },

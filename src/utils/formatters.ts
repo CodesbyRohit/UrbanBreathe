@@ -33,7 +33,7 @@ export function formatNumber(num: number): string {
 export function getAQIColor(aqi: number): string {
   if (aqi <= 50) return '#15803d';
   if (aqi <= 100) return '#4d7c0f';
-  if (aqi <= 200) return '#a16207';
+  if (aqi <= 200) return '#854d0e';
   if (aqi <= 300) return '#c2410c';
   if (aqi <= 400) return '#b91c1c';
   return '#6d28d9';

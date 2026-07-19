@@ -34,7 +34,7 @@ export default function MetricCard({
     <div className="bg-white rounded-xl border border-slate-200 p-3 hover:shadow-md hover:border-slate-300 transition-all duration-200">
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">{label}</span>
-        {icon && <span className="text-slate-300">{icon}</span>}
+        {icon && <span className="text-slate-400">{icon}</span>}
       </div>
       <div className="flex items-baseline gap-1">
         <span

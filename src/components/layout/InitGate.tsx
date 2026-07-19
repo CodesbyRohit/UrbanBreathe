@@ -44,7 +44,7 @@ export default function InitGate({ onTap }: InitGateProps) {
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTap(); }}
       role="button"
       tabIndex={0}
-      aria-label="Tap to initialize system"
+      aria-label="INITIALIZE SYSTEM — Tap anywhere to begin"
     >
       {/* Scanning lines effect — matching BootSequence */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.03]">
