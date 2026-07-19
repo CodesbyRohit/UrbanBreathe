@@ -78,7 +78,10 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
   // Build utterance with preferred calm voice
   function buildUtterance(text: string): SpeechSynthesisUtterance {
     const clean = text.replace(/\.{3,}$/g, '.');
-    const utterance = new SpeechSynthesisUtterance(clean);
+    // Leading space prevents Chrome TTS from clipping/stuttering the first
+    // syllable on cold-start — the engine 'warms up' on the space before
+    // reaching the real word, avoiding the letter-by-letter sound.
+    const utterance = new SpeechSynthesisUtterance(` ${clean}`);
     utterance.rate = 0.92;
     utterance.pitch = 0.85;
     utterance.volume = 1;
