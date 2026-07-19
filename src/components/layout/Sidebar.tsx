@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Search, TrendingUp, Settings, FileText, Users, X } from 'lucide-react';
+import { Activity, Search, TrendingUp, Settings, Shield, BarChart3, FileText, Users, X } from 'lucide-react';
 import type { NavSection } from '../../utils/constants';
 import { NAV_ITEMS } from '../../utils/constants';
 
@@ -8,6 +8,8 @@ const iconMap: Record<string, React.ReactNode> = {
   Search: <Search size={18} />,
   TrendingUp: <TrendingUp size={18} />,
   Settings: <Settings size={18} />,
+  Shield: <Shield size={18} />,
+  BarChart3: <BarChart3 size={18} />,
   FileText: <FileText size={18} />,
   Users: <Users size={18} />,
 };

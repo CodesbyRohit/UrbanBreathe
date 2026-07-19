@@ -12,6 +12,8 @@ export const NAV_ITEMS = [
   { id: 'sources', label: 'Source Attribution', icon: 'Search' },
   { id: 'forecast', label: 'Predictive Intelligence', icon: 'TrendingUp' },
   { id: 'simulator', label: 'Policy Simulator', icon: 'Settings' },
+  { id: 'enforcement', label: 'Enforcement Intelligence', icon: 'Shield' },
+  { id: 'comparative', label: 'Comparative Intelligence', icon: 'BarChart3' },
   { id: 'brief', label: 'Executive Brief', icon: 'FileText' },
   { id: 'advisory', label: 'Citizen Advisory', icon: 'Users' },
 ] as const;

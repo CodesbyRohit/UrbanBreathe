@@ -18,6 +18,8 @@ const LiveMonitoring = lazy(() => import('../dashboard/LiveMonitoring'));
 const SourceAttribution = lazy(() => import('../source-attribution/SourceAttribution'));
 const PredictiveIntelligence = lazy(() => import('../forecast/PredictiveIntelligence'));
 const PolicySimulator = lazy(() => import('../simulator/PolicySimulator'));
+const EnforcementIntelligence = lazy(() => import('../enforcement/EnforcementIntelligence'));
+const ComparativeIntelligence = lazy(() => import('../comparative/ComparativeIntelligence'));
 const ExecutiveBrief = lazy(() => import('../executive-brief/ExecutiveBrief'));
 const CitizenAdvisory = lazy(() => import('../citizen-advisory/CitizenAdvisory'));
 
@@ -153,6 +155,8 @@ export default function AppShell() {
         case 'sources': return <SourceAttribution cityId={selectedCityId} />;
         case 'forecast': return <PredictiveIntelligence cityId={selectedCityId} />;
         case 'simulator': return <PolicySimulator cityId={selectedCityId} />;
+        case 'enforcement': return <EnforcementIntelligence cities={cities} airQualityMap={airQualityMap} />;
+        case 'comparative': return <ComparativeIntelligence cities={cities} airQualityMap={airQualityMap} />;
         case 'brief': return <ExecutiveBrief cityId={selectedCityId} />;
         case 'advisory': return <CitizenAdvisory cityId={selectedCityId} />;
         default: return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
