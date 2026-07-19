@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Wind, Thermometer, Droplets, Eye, Gauge, Compass } from 'lucide-react';
+import { Wind, Thermometer, Droplets, Eye, Gauge, Compass, AlertTriangle } from 'lucide-react';
 import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, CartesianGrid,
 } from 'recharts';
@@ -81,7 +81,15 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
               prevAqi={prevAqiSnapshot}
             />
           </div>
-          <div className="mt-3 text-center">
+          <div className="mt-3 flex flex-col items-center gap-2">
+            {airQuality.anomaly?.isAnomaly && (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-200 rounded-full animate-fade-in" role="alert">
+                <AlertTriangle size={12} className="text-red-500 shrink-0" />
+                <span className="text-[11px] font-semibold text-red-700">
+                  Anomaly: {airQuality.anomaly.deviationPercent}% {airQuality.anomaly.direction === 'above' ? 'above' : 'below'} expected
+                </span>
+              </div>
+            )}
             <span className="text-[11px] text-slate-400">Data source: {airQuality.dataSource || 'Open-Meteo / Fallback'}</span>
           </div>
         </div>

@@ -11,6 +11,13 @@ export interface City {
   dominant: string;
 }
 
+export interface AnomalyInfo {
+  isAnomaly: boolean;
+  expectedRange: [number, number];
+  deviationPercent: number;
+  direction: 'above' | 'below' | 'normal';
+}
+
 export interface AirQualityData {
   aqi: number;
   pm25: number;
@@ -26,6 +33,7 @@ export interface AirQualityData {
   pressure: number;
   visibility: number;
   dataSource?: string;
+  anomaly?: AnomalyInfo;
 }
 
 export interface SourceAttribution {

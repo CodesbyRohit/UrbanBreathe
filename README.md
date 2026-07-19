@@ -224,35 +224,4 @@ cp .env.example .env
 
 Open-Meteo APIs are free and require no API key.
 
----
 
-## Scoring & Ratings
-
-| Category | Score | Notes |
-|----------|-------|-------|
-| **UI/UX** | 9.5/10 | Clean government-grade design, consistent spacing, professional visual hierarchy |
-| **Dashboard** | 9.5/10 | Comprehensive metrics, AQI gauge, pollutant grid, timeline, environmental intelligence |
-| **AI/ML** | 9.0/10 | Explainable source attribution with confidence scores, seasonal adjustment, forecasting engine |
-| **Simulator** | 9.5/10 | 8 interventions, before/after comparison, health/cost metrics, real-time projection |
-| **Executive Brief** | 9.5/10 | 7-section government-ready report, print/export, prioritized recommendations |
-| **Architecture** | 9.5/10 | Clean separation of concerns, typed API client, fallback-first design |
-| **Responsiveness** | 8.5/10 | Desktop-optimized with tablet support; mobile sidebar overlay with navigation |
-| **Performance** | 9.5/10 | Code-split via React.lazy (main bundle ~50KB); Recharts modules load on demand; 22KB CSS |
-| **Innovation** | 9.5/10 | Policy simulator with health impact modeling, multilingual advisory, AI explainability |
-| **Overall Product** | 9.4/10 | Production-ready government command centre platform |
-
----
-
-## Live Demo
-
-Deployed on Vercel: [https://urban-breathe-nine.vercel.app](https://urban-breathe-nine.vercel.app)
-
----
-
-## License
-
-MIT — Built for ET AI Hackathon 2.0
-
----
-
-*UrbanBreathe — From Reactive Monitoring to Proactive Environmental Governance*

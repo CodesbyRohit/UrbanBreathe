@@ -1,5 +1,61 @@
 import { getSeason } from './sourceAttribution.js';
 import { getAQICategory } from '../utils/calculations.js';
+import { cityMap } from '../data/cities.js';
+
+/**
+ * Detects whether the current AQI reading deviates significantly from
+ * what the diurnal cycle model would predict for this time of day,
+ * using the city's typical baseline AQI as the reference.
+ *
+ * Returns { isAnomaly, expectedRange, deviationPercent, direction }.
+ *
+ * The expected value is computed from the city's baseAQI (typical seasonal
+ * average) modulated by the same diurnal curve used in generateForecast.
+ * This means the current reading is compared against what the model
+ * considers "normal" for this city at this time of day — a genuine
+ * anomalous-event detector.
+ */
+export function detectAnomaly(currentData, cityId) {
+  const season = getSeason();
+  const actualAQI = currentData.aqi ?? 150;
+
+  // Use the city's known baseline; fall back to a sensible default
+  // (150 = moderate AQI) when the city isn't in the map.
+  const city = cityMap[cityId];
+  const cityBaselineAQI = city ? city.baseAQI : 150;
+
+  const seasonalMultipliers = {
+    winter: { amplitude: 0.25, trend: 0.02, variance: 0.15 },
+    summer: { amplitude: 0.15, trend: -0.01, variance: 0.10 },
+    monsoon: { amplitude: 0.20, trend: -0.03, variance: 0.12 },
+  };
+
+  const sm = seasonalMultipliers[season] || seasonalMultipliers.summer;
+
+  // Compute expected AQI at the current hour using the same diurnal model
+  const timeOfDay = new Date().getHours();
+  const diurnalFactor = Math.sin((timeOfDay - 4) * Math.PI / 12) * sm.amplitude;
+
+  const expectedAQI = Math.round(cityBaselineAQI * (1 + diurnalFactor));
+  const halfRange = Math.round(cityBaselineAQI * sm.variance * 0.5);
+
+  const expectedMin = Math.max(0, expectedAQI - halfRange);
+  const expectedMax = Math.min(500, expectedAQI + halfRange);
+
+  // Compare actual current reading against model expectation
+  const deviation = actualAQI - expectedAQI;
+  const deviationPercent = expectedAQI > 0 ? Math.abs(deviation) / expectedAQI : 0;
+  const deviationPctDisplay = Math.round(deviationPercent * 100);
+
+  const isAnomaly = deviationPercent > 0.4;
+
+  return {
+    isAnomaly,
+    expectedRange: [expectedMin, expectedMax],
+    deviationPercent: deviationPctDisplay,
+    direction: deviation > 0 ? 'above' : deviation < 0 ? 'below' : 'normal',
+  };
+}
 
 export function generateForecast(currentData, cityId) {
   const season = getSeason();
