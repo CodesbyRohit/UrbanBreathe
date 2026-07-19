@@ -84,7 +84,7 @@ export default function ImpactSection({ activeAnomalies, onNavigate }: ImpactSec
             </div>
 
             <div className="flex items-center gap-2 mb-1.5">
-              <h4 className="text-sm font-bold text-slate-800">{card.title}</h4>
+              <h3 className="text-sm font-bold text-slate-800">{card.title}</h3>
               <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider ${
                 card.title === 'Early Warning' && activeAnomalies > 0
                   ? 'bg-red-200 text-red-800'
