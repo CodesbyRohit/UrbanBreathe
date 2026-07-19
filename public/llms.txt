@@ -1,30 +1,28 @@
 # UrbanBreathe
-> AI-powered Smart City Air Quality Decision Intelligence Platform for government command centres, municipal corporations, and pollution control boards. Built for ET AI Hackathon 2.0.
+> AI-powered Smart City Air Quality Decision Intelligence Platform for government command centres, municipal corporations, and pollution control boards. Built for ET AI Hackathon 2.0 prototype.
 
-## Core Modules
+## Core Features
+- [Live Monitoring](https://urban-breathe-nine.vercel.app/): Real-time AQI dashboard with PM2.5, PM10, NO₂, O₃, SO₂, CO, weather, interactive gauge, and anomaly detection
+- [Source Attribution](https://urban-breathe-nine.vercel.app/): Explainable AI engine estimating pollution source contributions with confidence scores
+- [Predictive Intelligence](https://urban-breathe-nine.vercel.app/): 72-hour AQI forecast using diurnal cycle modeling with confidence scoring
+- [Policy Simulator](https://urban-breathe-nine.vercel.app/): Test 8 policy interventions with before/after comparison on AQI and health metrics
+- [Executive Brief](https://urban-breathe-nine.vercel.app/): One-click government-ready situational report with print/PDF export
+- [Citizen Advisory](https://urban-breathe-nine.vercel.app/): Multilingual health advisories (English, Hindi, Bengali, Telugu)
 
-- [Live Monitoring](https://urban-breathe-nine.vercel.app): Real-time AQI dashboard with PM2.5, PM10, NO₂, O₃, SO₂, CO, weather conditions, interactive AQI gauge, and anomaly detection.
-- [Source Attribution](https://urban-breathe-nine.vercel.app): Explainable AI engine estimating pollution source contributions (traffic, industry, biomass, dust) with confidence scores.
-- [Predictive Intelligence](https://urban-breathe-nine.vercel.app): 72-hour AQI forecast using diurnal cycle modeling with confidence scoring and hourly breakdown.
-- [Policy Simulator](https://urban-breathe-nine.vercel.app): Test 8 policy interventions with before/after comparison on AQI, PM2.5, hospital admissions, and cost.
-- [Executive Brief](https://urban-breathe-nine.vercel.app): One-click government-ready situational report with print/PDF export.
-- [Citizen Advisory](https://urban-breathe-nine.vercel.app): Multilingual health advisories (English, Hindi, Bengali, Telugu) with precautions and emergency contacts.
-
-## API Endpoints
-
-All endpoints served at `/api/` (proxy to Express backend):
-
-- `GET /api/cities` – List all monitored cities
-- `GET /api/air-quality/:cityId?lat=&lon=` – Live AQI and weather data
-- `GET /api/sources/:cityId` – AI source attribution
-- `GET /api/forecast/:cityId` – 72-hour forecast
-- `GET /api/simulation/interventions` – Available policy interventions
-- `POST /api/simulation/run` – Run policy simulation
-- `POST /api/brief/generate` – Generate executive brief
-- `GET /api/advisory/:cityId` – Citizen health advisory
+## API Reference
+- GET /api/cities — List all monitored cities
+- GET /api/air-quality/:cityId?lat=&lon= — Live AQI and weather data
+- GET /api/sources/:cityId — AI source attribution
+- GET /api/forecast/:cityId — 72-hour forecast
+- GET /api/simulation/interventions — Available policy interventions
+- POST /api/simulation/run — Run policy simulation
+- POST /api/brief/generate — Generate executive brief
+- GET /api/advisory/:cityId — Citizen health advisory
+- GET /api/health — Server health check
 
 ## Data
+- [Open-Meteo API](https://open-meteo.com/): Free weather and air quality data, no API key required
+- Fallback dataset: Curated reference data for 10 Indian cities when API is unavailable
 
-- **Data Source**: Open-Meteo API (free, no key required) with curated fallback dataset
-- **Cities**: Delhi, Mumbai, Bengaluru, Kolkata, Chennai, Hyderabad, Pune, Lucknow, Ahmedabad, Patna
-- **Tech Stack**: React 18, TypeScript, Vite, Tailwind CSS 3.4, Express.js
+## Technology
+- React 18, TypeScript, Vite, Tailwind CSS 3.4, Express.js, Recharts, Lucide Icons

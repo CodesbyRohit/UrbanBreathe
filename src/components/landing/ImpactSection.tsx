@@ -66,7 +66,7 @@ export default function ImpactSection({ activeAnomalies, onNavigate }: ImpactSec
     <div className="py-8">
       <div className="flex items-center gap-2 mb-5">
         <span className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Impact</h3>
+        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Impact</h2>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

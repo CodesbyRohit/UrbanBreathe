@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light mode (default) contrast fix — override default Tailwind colors that fail WCAG AA
+   Previous fix only applied to .theme-dark; the default :root state used raw Tailwind defaults.
+   text-slate-400 = #94a3b8 (2.8:1 on white ✗) → #475569 (5.8:1 ✓)
+   text-slate-500 = #64748b (4.1:1 on white ✗) → #334155 (7.6:1 ✓)     
+   Dark mode overrides below (.theme-dark rules) have higher specificity and still apply. */
+.text-slate-400 { color: #475569; }
+.text-slate-500 { color: #475569; }
+
 @layer base {
   * {
     box-sizing: border-box;
