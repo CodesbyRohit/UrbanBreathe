@@ -447,7 +447,7 @@ urbanbreathe/
 │       │   ├── SourceChart.tsx
 │       │   └── SourceDetail.tsx
 │       │
-│       ├── forecast/          # Predictive intelligence
+│       ├── forecast/          # AQI forecast
 │       │   ├── PredictiveIntelligence.tsx
 │       │   ├── ForecastChart.tsx
 │       │   └── ForecastTable.tsx
@@ -484,7 +484,7 @@ urbanbreathe/
     │   ├── forecast.js
     │   ├── simulation.js
     │   └── sources.js
-    ├── services/              # Business logic & AI engines
+    ├── services/              # Business logic & analytics engines
     │   ├── briefGenerator.js
     │   ├── forecastService.js
     │   ├── openMeteoService.js

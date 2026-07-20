@@ -17,8 +17,8 @@ const STATUS_LINES: {
     delay: 600,
   },
   {
-    displayText: 'AI SOURCE ATTRIBUTION ENGINE: ONLINE',
-    speechText: 'AI source attribution engine, online.',
+    displayText: 'SOURCE CONTRIBUTION ANALYSIS ENGINE: ONLINE',
+    speechText: 'Source contribution analysis engine, online.',
     delay: 1100,
   },
   {
