@@ -17,7 +17,7 @@ interface LiveMonitoringProps {
 }
 
 // Sample hourly data for trend visualization (static demo values)
-const mockTimeline = [
+const sampleTimeline = [
   { time: '00:00', aqi: 145, pm25: 62 }, { time: '04:00', aqi: 152, pm25: 68 },
   { time: '08:00', aqi: 178, pm25: 82 }, { time: '12:00', aqi: 198, pm25: 92 },
   { time: '16:00', aqi: 185, pm25: 85 }, { time: '20:00', aqi: 165, pm25: 75 },
@@ -149,7 +149,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
           </span>
         </div>
         <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={mockTimeline}>
+          <AreaChart data={sampleTimeline}>
             <defs>
               <linearGradient id="aqiGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={aqiColor} stopOpacity={0.15} />
