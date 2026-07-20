@@ -9,8 +9,8 @@ export const AQI_COLORS = {
 
 export const NAV_ITEMS = [
   { id: 'dashboard', label: 'Live Monitoring', icon: 'Activity' },
-  { id: 'sources', label: 'Source Attribution', icon: 'Search' },
-  { id: 'forecast', label: 'Predictive Intelligence', icon: 'TrendingUp' },
+  { id: 'sources', label: 'Source Contribution Analysis', icon: 'Search' },
+  { id: 'forecast', label: 'AQI Forecast', icon: 'TrendingUp' },
   { id: 'simulator', label: 'Policy Simulator', icon: 'Settings' },
   { id: 'enforcement', label: 'Enforcement Intelligence', icon: 'Shield' },
   { id: 'comparative', label: 'Comparative Intelligence', icon: 'BarChart3' },

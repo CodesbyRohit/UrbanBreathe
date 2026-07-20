@@ -78,8 +78,8 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
           <TrendingUp size={18} className="text-brand-600" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">72-Hour Predictive Intelligence</h2>
-          <p className="text-sm text-slate-500">AI-powered air quality forecasting with confidence scoring</p>
+          <h2 className="text-lg font-semibold text-slate-900">72-Hour AQI Forecast</h2>
+          <p className="text-sm text-slate-500">Diurnal cycle-based forecasting with confidence scoring</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[10px] text-slate-400">{data.season} season</span>

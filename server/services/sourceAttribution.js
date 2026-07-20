@@ -1,4 +1,4 @@
-// Explainable AI Source Attribution Engine
+// Multi-factor Source Contribution Analysis Engine
 // Estimates pollution source contributions using environmental indicators
 
 const SOURCE_PROFILES = {

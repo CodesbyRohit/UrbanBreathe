@@ -75,7 +75,7 @@ export function generateExecutiveBrief(cityId, currentData, sources, forecast, s
     },
     publicAdvisory: getHealthAdvisory(category.label),
     confidenceLevel: 'High',
-    methodology: 'Analysis based on real-time monitoring data, AI-powered source attribution, meteorological modeling, and evidence-based policy simulation.',
+    methodology: 'Analysis based on real-time monitoring data, multi-factor source contribution analysis, meteorological modeling, and evidence-based policy simulation.',
   };
 
   return brief;

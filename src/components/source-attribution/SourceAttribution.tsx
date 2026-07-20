@@ -59,8 +59,8 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
           <Brain size={18} className="text-brand-600" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">AI Source Attribution</h2>
-          <p className="text-sm text-slate-500">Explainable AI analysis of pollution contributors</p>
+          <h2 className="text-lg font-semibold text-slate-900">Source Contribution Analysis</h2>
+          <p className="text-sm text-slate-500">Multi-factor analysis of pollution contributors</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button onClick={refresh} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" aria-label="Refresh data">
