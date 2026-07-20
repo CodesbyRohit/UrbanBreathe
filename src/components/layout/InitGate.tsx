@@ -51,7 +51,7 @@ export default function InitGate({ onTap }: InitGateProps) {
         <div className="w-full h-px bg-white animate-scan-line" />
       </div>
 
-      {/* Brand icon / logo placeholder */}
+      {/* Command centre radar icon */}
       <div className="relative mb-8" aria-hidden="true">
         <svg width="64" height="64" viewBox="0 0 64 64" className="animate-pulse-soft">
           {/* Concentric rings — command centre aesthetic */}

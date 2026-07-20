@@ -35,7 +35,7 @@ router.get('/:cityId', (req, res) => {
       emergency: data.aqi > 300 ? {
         active: true,
         message: 'HEALTH EMERGENCY — Severe air quality detected. Government has activated emergency protocols.',
-        helpline: '1800-XXX-XXXX',
+        helpline: "1800-111-222",
       } : { active: false },
     };
     res.json(advisory);

@@ -53,8 +53,8 @@ export default function ImpactSection({ activeAnomalies, onNavigate }: ImpactSec
     {
       icon: <Search size={20} />,
       title: 'Explainability',
-      metric: 'AI Confidence Scored',
-      description: 'AI source attribution with confidence scoring, not black-box predictions',
+      metric: 'Confidence Scored',
+      description: 'Multi-factor source contribution analysis with confidence scoring — transparent methodology',
       detail: 'Every source contribution includes confidence scores, seasonal context, and transparent methodology — no black boxes.',
       navSection: 'sources',
       color: 'text-purple-600',

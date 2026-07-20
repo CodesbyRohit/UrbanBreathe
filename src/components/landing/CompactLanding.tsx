@@ -74,7 +74,7 @@ const IMPACT_CARDS = [
   {
     icon: <Search size={16} />,
     label: 'Explainability',
-    desc: 'AI with confidence scores',
+    desc: 'Source contribution with confidence scoring',
     action: 'View sources',
     section: 'sources' as NavSection,
     color: 'text-purple-600',

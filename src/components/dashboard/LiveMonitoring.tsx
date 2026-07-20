@@ -16,6 +16,7 @@ interface LiveMonitoringProps {
   loading: boolean;
 }
 
+// Sample hourly data for trend visualization (static demo values)
 const mockTimeline = [
   { time: '00:00', aqi: 145, pm25: 62 }, { time: '04:00', aqi: 152, pm25: 68 },
   { time: '08:00', aqi: 178, pm25: 82 }, { time: '12:00', aqi: 198, pm25: 92 },

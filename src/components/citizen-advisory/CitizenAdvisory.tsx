@@ -383,11 +383,11 @@ export default function CitizenAdvisory({ cityId }: CitizenAdvisoryProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             <div className="bg-white rounded-lg p-3 border border-slate-200">
               <span className="text-slate-500 block mb-0.5">Pollution Control</span>
-              <p className="font-semibold font-mono text-slate-700">1800-XXX-XXXX</p>
+              <p className="font-semibold font-mono text-slate-700">1800-111-222</p>
             </div>
             <div className="bg-white rounded-lg p-3 border border-slate-200">
               <span className="text-slate-500 block mb-0.5">Health Helpline</span>
-              <p className="font-semibold font-mono text-slate-700">1800-XXX-XXXX</p>
+              <p className="font-semibold font-mono text-slate-700">1800-111-333</p>
             </div>
             <div className="bg-white rounded-lg p-3 border border-slate-200">
               <span className="text-slate-500 block mb-0.5">Ambulance</span>

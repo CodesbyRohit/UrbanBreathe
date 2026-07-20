@@ -226,7 +226,7 @@ The application follows a standard client-server architecture with lazy-loaded f
     ↓  (click "Enter Command Centre")
 [Dashboard]
     ├── LiveMonitoring  (real-time AQI + weather)
-    ├── SourceAttribution  (AI analysis)
+    ├── SourceAttribution  (contribution analysis)
     ├── PredictiveIntelligence  (72h forecast)
     ├── PolicySimulator  (intervention testing)
     ├── EnforcementIntelligence  (anomalies)
@@ -442,7 +442,7 @@ urbanbreathe/
 │       │   ├── TimelineChart.tsx
 │       │   └── WeatherWidget.tsx
 │       │
-│       ├── source-attribution/ # AI source analysis
+│       ├── source-attribution/ # source contribution analysis
 │       │   ├── SourceAttribution.tsx
 │       │   ├── SourceChart.tsx
 │       │   └── SourceDetail.tsx
