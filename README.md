@@ -51,7 +51,7 @@ Built for the **ET AI Hackathon 2.0 — Grand Finale**.
 |---|---|
 | **Live Monitoring** | Real-time AQI, 6 pollutants, weather conditions, trend charts |
 | **Source Attribution** | Heuristic multi-factor pollution source correlation with confidence scoring |
-| **Predictive Intelligence** | 72-hour AQI forecast with diurnal cycle modeling and confidence bands |
+| **72-Hour AQI Forecast** | 72-hour AQI forecast with diurnal cycle modeling and confidence bands |
 | **Policy Simulator** | Test 8 intervention types with real-time impact projections |
 | **Executive Briefing** | Auto-generated government-ready situational reports with PDF export |
 | **Citizen Advisory** | Multilingual health advisories (EN, HI, BN, TE) with emergency alerts |
@@ -86,7 +86,7 @@ On first load, users are greeted with a full-screen **InitGate** that unlocks th
 - Science-based mitigation recommendations with actionable steps
 - Performance metrics (year-over-year comparison)
 
-### 🔮 Predictive Intelligence
+### 🔮 72-Hour AQI Forecast
 - 72-hour AQI forecasting system with:
   - Diurnal cycle modeling & seasonal trend analysis
   - Confidence scoring per forecast window
@@ -292,7 +292,7 @@ npm run build
 
 4. **Analyze pollution sources** — Visit the Source Attribution module to see estimated contributions from traffic, industry, biomass burning, and more.
 
-5. **View the forecast** — Predictive Intelligence shows a 72-hour projection with confidence bands and an hourly breakdown table.
+5. **View the forecast** — 72-Hour AQI Forecast shows a 72-hour projection with confidence bands and an hourly breakdown table.
 
 6. **Test policy interventions** — In the Policy Simulator, select one or more interventions and click "Run Simulation" to see projected impacts.
 
@@ -512,7 +512,7 @@ This section provides an honest account of the technical methods used and their 
 
 **Honest statement:** This is a heuristic rule-based system. There is no trained ML model, no training dataset, and no source-receptor matrix in this codebase. The heuristic provides reasonable directional estimates but has no learning component.
 
-### Forecasting (Predictive Intelligence)
+### Forecasting
 
 **Current method:** Heuristic diurnal cycle model with seasonal multipliers. The forecast applies a sinusoidal diurnal curve (peaking post-midnight, troughing mid-afternoon) modulated by seasonal amplitude/variance parameters, plus a linear trend factor and uniform random noise. No historical data is used — the forecast extrapolates from the single current AQI reading.
 

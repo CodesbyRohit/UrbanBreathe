@@ -211,7 +211,7 @@ export default function ExecutiveBrief({ cityId }: ExecutiveBriefProps) {
 
         {/* Source Attribution */}
         <div className="px-6 py-5 border-b border-slate-100 avoid-break">
-          <h4 className="text-sm font-semibold text-slate-800 mb-2">3. Source Attribution</h4>
+          <h4 className="text-sm font-semibold text-slate-800 mb-2">3. Source Contribution Analysis</h4>
           <p className="text-sm text-slate-600 mb-3">{brief.sourceAttribution.keyFinding}</p>
           <div className="space-y-2">
             {brief.sourceAttribution.topSources.map((s, i) => (
