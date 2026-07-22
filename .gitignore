@@ -41,3 +41,9 @@ coverage/
 .cache/
 tmp/
 temp/
+lighthouse-*.json
+lh-report.json
+lighthouse-final.json
+
+# Nested project copy
+/Srivastava/
