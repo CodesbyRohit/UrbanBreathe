@@ -28,14 +28,12 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
   const [activeModule, setActiveModule] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
   const completedRef = useRef(false);
-  const spokenRef = useRef(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // ─── Voice: ALWAYS default to unmuted on every fresh load ───────────────
 
   const [voiceSupported, setVoiceSupported] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(() => {
-    // Respect user's mute preference if they explicitly toggled it
     const stored = sessionStorage.getItem(VOICE_MUTED_KEY);
     if (stored !== null) return stored === 'true';
     return false; // Always unmuted by default
@@ -48,16 +46,14 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
   }, []);
 
   // ─── Boot Sequence (no sessionStorage caching — plays every time) ───────
+  // Note: The welcome message ("Initializing UrbanBreathe command centre.")
+  // is spoken in InitGate's init() call, which happens synchronously inside
+  // the user gesture. This means subsequent async speak() calls here will
+  // work because Chrome's audio pipeline is already unlocked.
 
   useEffect(() => {
     if (completedRef.current) return;
     setBootPhase('running');
-
-    // Speak welcome once
-    if (!spokenRef.current) {
-      spokenRef.current = true;
-      getSpeechService().speak('Initializing UrbanBreathe command centre.');
-    }
 
     SYSTEM_MODULES.forEach((mod, index) => {
       const timer = setTimeout(() => {

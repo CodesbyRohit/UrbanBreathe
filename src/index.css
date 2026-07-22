@@ -6,6 +6,11 @@
 .text-slate-400 { color: #475569; }
 .text-slate-500 { color: #475569; }
 
+/* GPU compositing helper — promote elements to their own layer */
+.will-change-transform {
+  will-change: transform;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -112,6 +117,7 @@
 
   /* ===== Intro Background ===== */
   .intro-gradient {
+    contain: paint layout;
     background:
       radial-gradient(ellipse 80% 60% at 50% 40%, rgba(59, 145, 232, 0.08) 0%, transparent 70%),
       radial-gradient(ellipse 60% 50% at 30% 60%, rgba(59, 145, 232, 0.04) 0%, transparent 60%),
@@ -137,53 +143,39 @@
 
   /* Grid overlay */
   .grid-overlay {
+    will-change: transform;
     background-image:
       linear-gradient(rgba(59, 145, 232, 0.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(59, 145, 232, 0.03) 1px, transparent 1px);
     background-size: 40px 40px;
   }
 
-  /* ===== Holographic Ring Button ===== */
+  /* ===== Holographic Ring Button (GPU-friendly) ===== */
   .holographic-ring {
     position: relative;
     border-radius: 50%;
     background: transparent;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    /* Glow ring via box-shadow — avoids expensive conic-gradient + mask */
+    box-shadow:
+      0 0 12px rgba(59, 145, 232, 0.15),
+      0 0 24px rgba(59, 145, 232, 0.06),
+      inset 0 0 12px rgba(59, 145, 232, 0.06);
+    border: 1.5px solid rgba(59, 145, 232, 0.25);
   }
-  .holographic-ring::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: 50%;
-    padding: 2px;
-    background: conic-gradient(
-      from 0deg,
-      transparent,
-      rgba(59, 145, 232, 0.3),
-      rgba(59, 145, 232, 0.6),
-      rgba(59, 145, 232, 0.3),
-      transparent 60%,
-      transparent
-    );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    animation: ringRotate 4s linear infinite;
+  .holographic-ring:hover {
+    box-shadow:
+      0 0 18px rgba(59, 145, 232, 0.25),
+      0 0 36px rgba(59, 145, 232, 0.1),
+      inset 0 0 18px rgba(59, 145, 232, 0.1);
+    border-color: rgba(96, 174, 239, 0.5);
   }
-  @keyframes ringRotate {
-    to { transform: rotate(360deg); }
+  .holographic-ring:active {
+    transform: scale(0.95);
   }
-  .holographic-ring:hover::before {
-    background: conic-gradient(
-      from 0deg,
-      transparent,
-      rgba(59, 145, 232, 0.5),
-      rgba(96, 174, 239, 0.8),
-      rgba(59, 145, 232, 0.5),
-      transparent 60%,
-      transparent
-    );
-  }
+
+  /* Animated glow ring behind */
   .holographic-ring::after {
     content: '';
     position: absolute;
@@ -192,16 +184,15 @@
     background: radial-gradient(circle, rgba(59, 145, 232, 0.06) 0%, transparent 70%);
     opacity: 0;
     transition: opacity 0.3s ease;
+    pointer-events: none;
   }
   .holographic-ring:hover::after {
     opacity: 1;
   }
-  .holographic-ring:active {
-    transform: scale(0.95);
-  }
 
   /* ===== Microinteractions ===== */
   .card-hover {
+    will-change: transform;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .card-hover:hover {
@@ -235,6 +226,7 @@
     pointer-events: none;
     z-index: 0;
     overflow: hidden;
+    contain: paint layout;
   }
   .dashboard-ambient::before {
     content: '';
@@ -243,6 +235,7 @@
     left: -50%;
     width: 200%;
     height: 200%;
+    will-change: transform;
     background:
       radial-gradient(ellipse 40% 30% at 20% 50%, rgba(59, 145, 232, 0.03) 0%, transparent 60%),
       radial-gradient(ellipse 30% 40% at 80% 30%, rgba(59, 145, 232, 0.02) 0%, transparent 60%),
@@ -264,6 +257,7 @@
     border-radius: 50%;
     background: rgba(59, 145, 232, 0.4);
     pointer-events: none;
+    will-change: transform, opacity;
   }
 
   /* ===== Skeleton ===== */
@@ -281,29 +275,10 @@
     background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
   }
 
-  /* ===== Ripple effect ===== */
-  .ripple {
-    position: relative;
-    overflow: hidden;
-  }
-  .ripple::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255, 255, 255, 0.2) 0%, transparent 60%);
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-  }
-  .ripple:active::after {
-    opacity: 1;
-    transition: opacity 0s;
-  }
-
   /* ===== City network lines (SVG animation) ===== */
   .city-line {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
+    stroke-dasharray: 600;
+    stroke-dashoffset: 600;
     animation: drawLine 3s ease-out forwards;
   }
   @keyframes drawLine {

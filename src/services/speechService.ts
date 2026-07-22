@@ -3,10 +3,12 @@
  *
  * Key design decisions:
  * 1. Must be initialised inside a user gesture (click handler).
- * 2. Pre-loads and caches voices so consumers never race with Chrome's async voice loading.
- * 3. Always calls speechSynthesis.cancel() before creating a new utterance.
- * 4. Never reuses utterance objects.
- * 5. Returns a Promise so callers can await voice readiness.
+ * 2. The first `init()` call speaks the welcome text SYNCHRONOUSLY so it
+ *    stays within the user gesture — this is critical for Chrome, which
+ *    silently blocks speechSynthesis.speak() calls from non-gesture contexts.
+ * 3. Pre-loads and caches voices so subsequent async speak() calls work.
+ * 4. Always calls speechSynthesis.cancel() before queuing new speech.
+ * 5. Never reuses utterance objects.
  * 6. Fails silently — never throws, never logs.
  */
 
@@ -24,10 +26,15 @@ class SpeechService {
 
   /**
    * Must be called from within a user gesture (click/tap/keydown handler).
-   * Primes Chrome's speech engine and begins asynchronous voice loading.
-   * Safe to call multiple times — only the first call takes effect.
+   *
+   * - Primes Chrome's speech engine by speaking `firstText` immediately
+   *   (synchronously, inside the gesture). This is ESSENTIAL for Incognito
+   *   where voice data is never cached and the async path would push the
+   *   speechSynthesis.speak() call outside the gesture where Chrome blocks it.
+   * - Begins asynchronous voice loading for subsequent speak() calls.
+   * - Safe to call multiple times — only the first call takes effect.
    */
-  init(): void {
+  init(firstText?: string): void {
     if (this._initialized || this.destroyed) return;
     if (!this.supported) return;
 
@@ -36,27 +43,42 @@ class SpeechService {
     // Cancel any leftover speech from a previous lifecycle
     window.speechSynthesis.cancel();
 
-    // Prime the speech engine with a silent utterance inside the user gesture.
-    // Chrome requires at least one speak() call from a gesture context before
-    // timer-driven speak() calls are allowed.
-    const unlock = new SpeechSynthesisUtterance(' ');
-    window.speechSynthesis.speak(unlock);
-    window.speechSynthesis.cancel();
-
-    // Guard: if voices are synchronously available (Chrome caches them after the
-    // first load in the same tab session), cache them immediately.
+    // Check for synchronously available voices (cached by Chrome)
     const immediate = window.speechSynthesis.getVoices();
     if (immediate.length > 0) {
       this.voices = immediate;
-      return;
+    } else {
+      // Start async voice loading for subsequent speak() calls
+      this.voicesPromise = this.loadVoices();
     }
 
-    // Otherwise start async loading so consumers can await ensureVoices().
-    this.voicesPromise = this.loadVoices();
+    // ── Speak the first text NOW, inside the user gesture ───────────────
+    // This is the critical fix for Incognito/private browsing.
+    // Chrome requires the FIRST speechSynthesis.speak() to happen within
+    // a user gesture. In Incognito, voice data is never cached, so the
+    // async voice-loading path would cause the actual speak() to fire
+    // outside the gesture — Chrome silently blocks it.
+    //
+    // By speaking synchronously here (even without a preferred voice),
+    // we unlock Chrome's audio pipeline. Voices will be selected for
+    // subsequent speak() calls when they become available.
+    if (firstText) {
+      const utterance = this.makeUtterance(firstText);
+      // If voices are cached, apply the preferred voice immediately
+      if (this.voices) {
+        const preferred = this.pickVoice(this.voices);
+        if (preferred) utterance.voice = preferred;
+      }
+      window.speechSynthesis.speak(utterance);
+    } else {
+      // No text provided — prime the engine with a silent utterance
+      // BUT do NOT cancel it (cancelling mid-init breaks Chrome's engine).
+      const unlock = new SpeechSynthesisUtterance(' ');
+      window.speechSynthesis.speak(unlock);
+    }
   }
 
   private async loadVoices(): Promise<SpeechSynthesisVoice[]> {
-    // Some browsers (Firefox) load voices synchronously.
     const existing = window.speechSynthesis.getVoices();
     if (existing.length > 0) {
       this.voices = existing;
@@ -105,7 +127,8 @@ class SpeechService {
   /**
    * Speak a line of synthetic speech.
    *
-   * - Cancels any in-progress utterance first.
+   * - Cancels any in-progress utterance first (including the firstText
+   *   spoken during init()).
    * - Waits for voices to be ready before speaking.
    * - Creates a brand-new utterance object every call.
    * - Returns true if speech was queued, false if unsupported.
@@ -119,28 +142,18 @@ class SpeechService {
     if (!this.supported) return false;
 
     try {
-      // Always cancel before queuing new speech to prevent overlap.
       window.speechSynthesis.cancel();
 
-      // Wait for voice data to be available.
       const voices = await this.ensureVoices();
       if (this.destroyed) return false;
 
-      // Create a brand-new utterance (never reuse objects).
-      const clean = text.replace(/\.{3,}$/g, '.');
-      // Leading space prevents Chrome TTS from stuttering the first syllable.
-      const utterance = new SpeechSynthesisUtterance(` ${clean}`);
-      utterance.rate = 0.92;
-      utterance.pitch = 0.85;
-      utterance.volume = 1;
-
+      const utterance = this.makeUtterance(text);
       const preferred = this.pickVoice(voices, preference);
       if (preferred) utterance.voice = preferred;
 
       window.speechSynthesis.speak(utterance);
       return true;
     } catch (_) {
-      // Swallow all errors — never let speech fail the boot sequence.
       return false;
     }
   }
@@ -171,9 +184,20 @@ class SpeechService {
 
   // ── Helpers ─────────────────────────────────────────────────────────────
 
+  private makeUtterance(text: string): SpeechSynthesisUtterance {
+    // Remove trailing ellipsis for cleaner speech
+    const clean = text.replace(/\.{3,}$/g, '.');
+    // Leading space prevents Chrome TTS from stuttering the first syllable
+    const utterance = new SpeechSynthesisUtterance(` ${clean}`);
+    utterance.rate = 0.92;
+    utterance.pitch = 0.85;
+    utterance.volume = 1;
+    return utterance;
+  }
+
   private pickVoice(
     voices: SpeechSynthesisVoice[],
-    _preference: VoicePreference,
+    _preference: VoicePreference = 'auto',
   ): SpeechSynthesisVoice | undefined {
     if (voices.length === 0) return undefined;
 

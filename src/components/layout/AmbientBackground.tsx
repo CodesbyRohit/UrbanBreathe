@@ -8,15 +8,16 @@ interface AmbientBackgroundProps {
  * GPU-friendly ambient background effect.
  * Uses CSS transforms and opacity transitions — no canvas, no heavy JS.
  * Two variants: 'intro' (dark, with grid + particles) and 'dashboard' (subtle gradients).
+ * All animated elements have will-change hints in CSS for GPU compositing.
  */
 export default function AmbientBackground({ variant = 'intro' }: AmbientBackgroundProps) {
   // Generate stable particle positions (memoized once)
   const particles = useMemo(() => {
     if (variant !== 'intro') return [];
-    return Array.from({ length: 30 }, (_, i) => ({
+    return Array.from({ length: 15 }, (_, i) => ({
       id: i,
-      left: `${(i * 3.3 + 7) % 100}%`,
-      top: `${(i * 7.1 + 3) % 100}%`,
+      left: `${(i * 6.6 + 7) % 100}%`,
+      top: `${(i * 14.2 + 3) % 100}%`,
       delay: `${(i * 0.4) % 4}s`,
       duration: `${6 + (i % 5) * 2}s`,
       size: i % 3 === 0 ? 3 : 2,
@@ -30,10 +31,10 @@ export default function AmbientBackground({ variant = 'intro' }: AmbientBackgrou
 
   return (
     <div className="absolute inset-0 intro-gradient scan-overlay" aria-hidden="true">
-      {/* Moving grid */}
+      {/* Moving grid — GPU-composited via will-change in CSS */}
       <div className="absolute inset-0 grid-overlay opacity-50 animate-grid-scroll" />
 
-      {/* Particles */}
+      {/* Particles — GPU-composited via CSS .particle will-change hints */}
       {particles.map((p) => (
         <div
           key={p.id}
@@ -68,14 +69,10 @@ export default function AmbientBackground({ variant = 'intro' }: AmbientBackgrou
         preserveAspectRatio="xMidYMid slice"
         aria-hidden="true"
       >
-        {/* Horizontal scan line */}
         <line x1="0" y1="300" x2="800" y2="300" stroke="#3b91e8" strokeWidth="0.5" className="city-line" style={{ animationDelay: '0.5s' }} />
-        {/* Vertical scan line */}
         <line x1="400" y1="0" x2="400" y2="600" stroke="#3b91e8" strokeWidth="0.5" className="city-line" style={{ animationDelay: '1s' }} />
-        {/* Diagonal connections */}
         <line x1="100" y1="100" x2="700" y2="500" stroke="#3b91e8" strokeWidth="0.3" className="city-line" style={{ animationDelay: '1.5s' }} />
         <line x1="700" y1="100" x2="100" y2="500" stroke="#3b91e8" strokeWidth="0.3" className="city-line" style={{ animationDelay: '2s' }} />
-        {/* Arc */}
         <path d="M 200 400 Q 400 200 600 400" fill="none" stroke="#3b91e8" strokeWidth="0.4" className="city-line" style={{ animationDelay: '2.5s' }} />
         <path d="M 300 150 Q 400 300 500 150" fill="none" stroke="#3b91e8" strokeWidth="0.4" className="city-line" style={{ animationDelay: '3s' }} />
       </svg>

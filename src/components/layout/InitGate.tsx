@@ -10,20 +10,22 @@ export default function InitGate({ onTap }: InitGateProps) {
   const [fadingOut, setFadingOut] = useState(false);
   const [hovered, setHovered] = useState(false);
   const tappedRef = useRef(false);
-  // Speak welcome message once per session
   const spokenRef = useRef(false);
 
   const handleTap = useCallback(() => {
     if (fadingOut || tappedRef.current) return;
     tappedRef.current = true;
 
-    // Initialise speech engine inside user gesture
-    getSpeechService().init();
-
-    // Speak welcome immediately
+    // Initialise speech engine inside user gesture.
+    // Pass the welcome text so it's spoken SYNCHRONOUSLY within the gesture.
+    // This is critical for Chrome Incognito where voice data is not cached
+    // and an async speak() would fire outside the gesture — Chrome silently
+    // blocks non-gesture speech.
     if (!spokenRef.current) {
       spokenRef.current = true;
-      getSpeechService().speak('Initializing UrbanBreathe command centre.');
+      getSpeechService().init('Initializing UrbanBreathe command centre.');
+    } else {
+      getSpeechService().init();
     }
 
     setFadingOut(true);
@@ -33,7 +35,12 @@ export default function InitGate({ onTap }: InitGateProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.key === 'Enter' || e.key === ' ') && !fadingOut && !tappedRef.current) {
       tappedRef.current = true;
-      getSpeechService().init();
+      if (!spokenRef.current) {
+        spokenRef.current = true;
+        getSpeechService().init('Initializing UrbanBreathe command centre.');
+      } else {
+        getSpeechService().init();
+      }
       setFadingOut(true);
       setTimeout(() => onTap(), 600);
     }
