@@ -4,6 +4,7 @@ import IndiaMap from '../common/IndiaMap';
 import type { NavSection } from '../../utils/constants';
 import type { City, AirQualityData } from '../../types';
 import { getAQIColor } from '../../utils/formatters';
+import { getSpeechService } from '../../services/speechService';
 
 interface CompactLandingProps {
   cities: City[];
@@ -87,17 +88,10 @@ export default function CompactLanding({
   cities, selectedCityId, airQualityMap, anomalyMap, worstCity, activeAnomalies,
   onSelectCity, onEnterDashboard, onNavigate,
 }: CompactLandingProps) {
-  // Pre-unlock speechSynthesis so BootSequence can auto-speak without a separate click
   const handleEnterDashboard = () => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      // Speak + immediately cancel: primes Chrome's speech engine so subsequent
-      // speak() calls from non-gesture contexts (timers) are permitted.
-      // Must be called synchronously inside a user gesture (this click handler).
-      const unlock = new SpeechSynthesisUtterance(' ');
-      window.speechSynthesis.speak(unlock);
-      window.speechSynthesis.cancel(); // killed before any audio frame is queued
-    }
-    sessionStorage.setItem('urbanbreathe_audio_unlocked', 'true');
+    // Initialize speech engine if not already done (handles the CompactLanding →
+    // Dashboard path where InitGate wasn't shown)
+    getSpeechService().init();
     onEnterDashboard();
   };
 

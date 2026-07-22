@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
+import { getSpeechService } from '../../services/speechService';
 
 const STATUS_LINES: {
   displayText: string;
@@ -48,6 +49,9 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<SVGCircleElement>(null);
   const typewriterCharsRef = useRef<number[]>([]);
+  const spokenLinesRef = useRef<Set<number>>(new Set());
+  const audioInitRef = useRef(false);
+  const completedRef = useRef(false);
 
   // Check if already played this session
   const [shouldShow, setShouldShow] = useState(true);
@@ -66,77 +70,29 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
   const [voiceSupported, setVoiceSupported] = useState(false);
   const [voiceMuted, setVoiceMuted] = useState(() => {
     const stored = sessionStorage.getItem(VOICE_MUTED_KEY);
-    // If user manually toggled mute before, respect it
     if (stored !== null) return stored === 'true';
-    // If audio was pre-unlocked by the Enter Command Centre click, default to ON
-    if (sessionStorage.getItem('urbanbreathe_audio_unlocked') === 'true') return false;
-    // First visit — start muted; the user can unmute via the toggle
+    // If the speech service was initialised earlier (via InitGate), default to ON
+    if (getSpeechService().initialized) return false;
     return true;
   });
   const voiceMutedRef = useRef(voiceMuted);
   voiceMutedRef.current = voiceMuted;
-  const spokenLinesRef = useRef<Set<number>>(new Set());
 
-  // Detect Web Speech API support & prime Chrome's async voice loading
   useEffect(() => {
-    const supported = typeof window !== 'undefined' && 'speechSynthesis' in window;
-    setVoiceSupported(supported);
-    if (!supported) return;
-
-    // Chrome populates voices asynchronously; the first getVoices() call
-    // returns empty. Calling it once from mount and listening for
-    // 'voiceschanged' ensures voices are loaded by the time the user
-    // interacts with the voice toggle.
-    window.speechSynthesis.getVoices();
-    const onVoicesChanged = () => {
-      // read once to populate Chrome's internal cache; buildUtterance
-      // calls getVoices() directly for fresh results each time
-      window.speechSynthesis.getVoices();
-    };
-    window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
-    return () => {
-      window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
-    };
+    setVoiceSupported(getSpeechService().supported);
   }, []);
 
-  // Build utterance with preferred calm voice
-  function buildUtterance(text: string): SpeechSynthesisUtterance {
-    const clean = text.replace(/\.{3,}$/g, '.');
-    // Leading space prevents Chrome TTS from clipping/stuttering the first
-    // syllable on cold-start — the engine 'warms up' on the space before
-    // reaching the real word, avoiding the letter-by-letter sound.
-    const utterance = new SpeechSynthesisUtterance(` ${clean}`);
-    utterance.rate = 0.92;
-    utterance.pitch = 0.85;
-    utterance.volume = 1;
-    // Read voices directly each time (Chrome populates async)
-    const voices = window.speechSynthesis.getVoices();
-    const preferred =
-      voices.find(v => v.name.toLowerCase().includes('google uk english male')) ??
-      voices.find(v => v.name.toLowerCase().includes('male')) ??
-      voices.find(v =>
-        ['david', 'daniel', 'james', 'mark'].some(n => v.name.toLowerCase().includes(n))
-      ) ??
-      voices[0];
-    if (preferred) utterance.voice = preferred;
-    return utterance;
-  }
-
-  // Speak the given index's line if it has completed typing and hasn't been spoken yet.
-  // Called DIRECTLY from animation timers (typewriter completion).
-  function speakLineIfCompleted(index: number) {
+  // Speak the given index's line — always cancels first, never reuses objects.
+  async function speakLine(index: number) {
     if (voiceMutedRef.current) return;
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    const chars = typewriterCharsRef.current[index] ?? 0;
-    if (chars >= STATUS_LINES[index].displayText.length && !spokenLinesRef.current.has(index)) {
-      spokenLinesRef.current.add(index);
-      const line = STATUS_LINES[index];
-      window.speechSynthesis.speak(buildUtterance(line.speechText ?? line.displayText));
-    }
+    if (spokenLinesRef.current.has(index)) return;
+    spokenLinesRef.current.add(index);
+
+    const line = STATUS_LINES[index];
+    await getSpeechService().speak(line.speechText ?? line.displayText);
   }
 
-  // Toggle voice — speaks DIRECTLY in click handler so cancel() + speak()
-  // happen synchronously within the user gesture context.
+  // Toggle voice on/off.
   const toggleVoice = useCallback(() => {
     const willMute = !voiceMuted;
     setVoiceMuted(willMute);
@@ -144,21 +100,17 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
     voiceMutedRef.current = willMute;
 
     if (willMute) {
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      getSpeechService().cancel();
     } else {
-      // Unmuting: queue completed lines. No cancel() here — the speech
-      // queue is already empty (was cancelled on mute). A cancel() here
-      // would race with the new speak() calls and can swallow audio.
+      // Unmuting: queue any completed lines that haven't been spoken yet.
       for (let i = 0; i < STATUS_LINES.length; i++) {
         const chars = typewriterChars[i] ?? 0;
         if (chars >= STATUS_LINES[i].displayText.length && !spokenLinesRef.current.has(i)) {
-          spokenLinesRef.current.add(i);
-          window.speechSynthesis.speak(buildUtterance(STATUS_LINES[i].speechText ?? STATUS_LINES[i].displayText));
+          speakLine(i);
         }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceMuted, typewriterChars]);
 
   // ─── Animation Logic ───────────────────────────────────────────────────────
@@ -184,8 +136,8 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
           typewriterCharsRef.current[index] = charIndex;
           if (charIndex >= line.displayText.length) {
             clearInterval(typeInterval);
-            // Speak completed line directly from timer callback
-            speakLineIfCompleted(index);
+            // Speak completed line
+            speakLine(index);
           }
         }, 20);
         timers.push(typeInterval as unknown as ReturnType<typeof setTimeout>);
@@ -208,6 +160,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
     if (!shouldShow || !ringRef.current) return;
     let startTime: number | null = null;
     const duration = 2500;
+    let rafId: number;
 
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
@@ -219,14 +172,17 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
         ringRef.current.style.strokeDashoffset = String(offset);
       }
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        rafId = requestAnimationFrame(animate);
       }
     };
-    requestAnimationFrame(animate);
+    rafId = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(rafId);
   }, [shouldShow]);
 
   const handleComplete = () => {
-    if (skipped) return;
+    if (skipped || completedRef.current) return;
+    completedRef.current = true;
     setFadingOut(true);
     setTimeout(() => {
       sessionStorage.setItem(STORAGE_KEY, 'true');
@@ -238,12 +194,18 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
     if (skipped || fadingOut) return;
     setSkipped(true);
     // Immediately cancel any in-progress speech
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
+    getSpeechService().cancel();
     sessionStorage.setItem(STORAGE_KEY, 'true');
     onComplete();
   };
+
+  // ─── Cleanup on unmount ────────────────────────────────────────────────────
+
+  useEffect(() => {
+    return () => {
+      getSpeechService().cancel();
+    };
+  }, []);
 
   if (!shouldShow) return null;
 

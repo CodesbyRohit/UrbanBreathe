@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { getSpeechService } from '../../services/speechService';
 
 const STORAGE_KEY = 'urbanbreathe_boot_played';
-const AUDIO_UNLOCKED_KEY = 'urbanbreathe_audio_unlocked';
 
 interface InitGateProps {
   onTap: () => void;
@@ -9,6 +9,7 @@ interface InitGateProps {
 
 export default function InitGate({ onTap }: InitGateProps) {
   const [fadingOut, setFadingOut] = useState(false);
+  const tappedRef = useRef(false);
 
   // If boot has already played this session, skip the gate immediately
   useEffect(() => {
@@ -18,16 +19,13 @@ export default function InitGate({ onTap }: InitGateProps) {
   }, [onTap]);
 
   const handleTap = () => {
-    if (fadingOut) return;
+    if (fadingOut || tappedRef.current) return;
+    tappedRef.current = true;
 
-    // Pre-unlock speechSynthesis so BootSequence voice plays automatically.
-    // Must be called synchronously inside a user gesture (this click handler).
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      const unlock = new SpeechSynthesisUtterance(' ');
-      window.speechSynthesis.speak(unlock);
-      window.speechSynthesis.cancel(); // killed before any audio frame is queued
-    }
-    sessionStorage.setItem(AUDIO_UNLOCKED_KEY, 'true');
+    // Initialise the speech engine synchronously inside the user gesture.
+    // This primes Chrome's speech engine and begins loading voices so that
+    // BootSequence's timer-driven speak() calls work reliably.
+    getSpeechService().init();
 
     setFadingOut(true);
     setTimeout(() => {
