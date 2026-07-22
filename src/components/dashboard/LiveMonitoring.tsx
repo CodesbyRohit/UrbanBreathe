@@ -16,7 +16,6 @@ interface LiveMonitoringProps {
   loading: boolean;
 }
 
-// Sample hourly data for trend visualization (static demo values)
 const sampleTimeline = [
   { time: '00:00', aqi: 145, pm25: 62 }, { time: '04:00', aqi: 152, pm25: 68 },
   { time: '08:00', aqi: 178, pm25: 82 }, { time: '12:00', aqi: 198, pm25: 92 },
@@ -38,7 +37,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
         </div>
         <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 animate-pulse-soft" style={{ animationDelay: `${i * 60}ms` }}>
+            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4" style={{ animationDelay: `${i * 60}ms` }}>
               <div className="skeleton w-14 h-3 mb-3" />
               <div className="skeleton w-10 h-6 mb-2" />
               <div className="skeleton w-16 h-3" />
@@ -63,17 +62,18 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
   const aqiColor = getAQIColor(airQuality.aqi);
   const aqiLabel = getAQILabel(airQuality.aqi);
 
-  // Store current AQI for next comparison
-  // Always update ref so city/data changes animate from current value
   if (prevAqiRef.current === null) prevAqiRef.current = airQuality.aqi;
   const prevAqiSnapshot = prevAqiRef.current;
   prevAqiRef.current = airQuality.aqi;
 
   return (
     <div className="space-y-6">
-      {/* AQI Overview — tighter hierarchy */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-6 flex flex-col items-center justify-center">
+      {/* AQI Overview with staggered animation */}
+      <div
+        className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+        style={{ animation: 'cardEnter 0.5s ease-out forwards' }}
+      >
+        <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-6 flex flex-col items-center justify-center card-hover">
           <div className="relative">
             <AQIGauge
               aqi={airQuality.aqi}
@@ -101,44 +101,61 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
         </div>
 
         <div className="lg:col-span-2 space-y-3">
+          {/* Weather cards — staggered */}
           <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
             <span className="w-1 h-1 rounded-full bg-slate-400" />
             Weather
           </span>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard label="Temperature" value={Math.round(airQuality.temperature)} unit="°C" icon={<Thermometer size={16} />} />
-            <MetricCard label="Humidity" value={Math.round(airQuality.humidity)} unit="%" icon={<Droplets size={16} />} />
-            <MetricCard label="Wind Speed" value={Math.round(airQuality.windSpeed * 10) / 10} unit="km/h" icon={<Wind size={16} />} subtitle={airQuality.windDirection} />
-            <MetricCard label="Visibility" value={airQuality.visibility?.toFixed(1) || '--'} unit="km" icon={<Eye size={16} />} />
+            {[
+              { el: <MetricCard key="temp" label="Temperature" value={Math.round(airQuality.temperature)} unit="°C" icon={<Thermometer size={16} />} />, delay: 0 },
+              { el: <MetricCard key="hum" label="Humidity" value={Math.round(airQuality.humidity)} unit="%" icon={<Droplets size={16} />} />, delay: 1 },
+              { el: <MetricCard key="wind" label="Wind Speed" value={Math.round(airQuality.windSpeed * 10) / 10} unit="km/h" icon={<Wind size={16} />} subtitle={airQuality.windDirection} />, delay: 2 },
+              { el: <MetricCard key="vis" label="Visibility" value={airQuality.visibility?.toFixed(1) || '--'} unit="km" icon={<Eye size={16} />} />, delay: 3 },
+            ].map((item, i) => (
+              <div key={i} style={{ animation: `cardEnter 0.4s ease-out ${item.delay * 0.12}s forwards`, opacity: 0 }}>
+                {item.el}
+              </div>
+            ))}
           </div>
+
+          {/* Air Quality cards — staggered */}
           <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
             <span className="w-1 h-1 rounded-full bg-slate-400" />
             Air Quality
           </span>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard label="Pressure" value={Math.round(airQuality.pressure)} unit="hPa" icon={<Gauge size={16} />} />
-            <MetricCard label="Wind Dir" value={airQuality.windDirection || '--'} icon={<Compass size={16} />} subtitle="Direction" />
-            <MetricCard label="PM2.5 / PM10" value={`${Math.round(airQuality.pm25)} / ${Math.round(airQuality.pm10)}`} unit="µg/m³" trend={airQuality.pm25 > 60 ? 'up' : 'down'} />
-            <MetricCard label="Overall AQI" value={formatAQI(airQuality.aqi)} color={aqiColor} trend={airQuality.aqi > 200 ? 'up' : airQuality.aqi > 100 ? 'stable' : 'down'} />
+            {[
+              { el: <MetricCard key="press" label="Pressure" value={Math.round(airQuality.pressure)} unit="hPa" icon={<Gauge size={16} />} />, delay: 4 },
+              { el: <MetricCard key="wdir" label="Wind Dir" value={airQuality.windDirection || '--'} icon={<Compass size={16} />} subtitle="Direction" />, delay: 5 },
+              { el: <MetricCard key="pm" label="PM2.5 / PM10" value={`${Math.round(airQuality.pm25)} / ${Math.round(airQuality.pm10)}`} unit="µg/m³" trend={airQuality.pm25 > 60 ? 'up' : 'down'} />, delay: 6 },
+              { el: <MetricCard key="aqi" label="Overall AQI" value={formatAQI(airQuality.aqi)} color={aqiColor} trend={airQuality.aqi > 200 ? 'up' : airQuality.aqi > 100 ? 'stable' : 'down'} />, delay: 7 },
+            ].map((item, i) => (
+              <div key={i} style={{ animation: `cardEnter 0.4s ease-out ${item.delay * 0.12}s forwards`, opacity: 0 }}>
+                {item.el}
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Pollutants Grid */}
-      <div>
+      {/* Pollutants Grid — staggered */}
+      <div style={{ animation: 'cardEnter 0.5s ease-out 0.6s forwards', opacity: 0 }}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-700">Pollutant Concentrations</h2>
           <span className="text-[10px] text-slate-500 uppercase tracking-wider">All values in µg/m³ or ppb</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {POLLUTANTS.map(p => (
-            <PollutantCard key={p.key} pollutant={p} data={airQuality} />
+          {POLLUTANTS.map((p, i) => (
+            <div key={p.key} style={{ animation: `cardEnter 0.4s ease-out ${(i + 8) * 0.12}s forwards`, opacity: 0 }}>
+              <PollutantCard pollutant={p} data={airQuality} />
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Timeline Chart — with clear takeaway */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
+      {/* Timeline Chart */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 card-hover" style={{ animation: 'cardEnter 0.5s ease-out 1.2s forwards', opacity: 0 }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-slate-700">Today's AQI Trend</h2>
           <span className="text-[11px] text-slate-500 font-medium">
@@ -165,9 +182,9 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
         </ResponsiveContainer>
       </div>
 
-      {/* Health & City Info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+      {/* Health & City Info — staggered */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ animation: 'cardEnter 0.5s ease-out 1.6s forwards', opacity: 0 }}>
+        <div className="bg-white rounded-xl border border-slate-200 p-5 card-hover">
           <h2 className="text-sm font-semibold text-slate-700 mb-3">City Health Metrics</h2>
           <div className="space-y-2 text-sm text-slate-600">
             <div className="flex justify-between py-1.5 border-b border-slate-50 last:border-0">
@@ -188,7 +205,7 @@ export default function LiveMonitoring({ city, airQuality, loading }: LiveMonito
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 card-hover">
           <h2 className="text-sm font-semibold text-slate-700 mb-3">Environmental Intelligence</h2>
           <div className="space-y-2">
             {airQuality.aqi > 200 && (

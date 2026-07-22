@@ -64,6 +64,21 @@ export default {
         'slide-up': 'slideUp 0.3s ease-out',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
         'scale-in': 'scaleIn 0.2s ease-out',
+        'scale-in-slow': 'scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        'spin-slow': 'spin 8s linear infinite',
+        'spin-slower': 'spin 15s linear infinite',
+        'drift': 'drift 6s ease-in-out infinite',
+        'drift-slow': 'drift 10s ease-in-out infinite',
+        'glow-pulse': 'glowPulse 3s ease-in-out infinite',
+        'float': 'float 4s ease-in-out infinite',
+        'breath': 'breath 4s ease-in-out infinite',
+        'grid-scroll': 'gridScroll 20s linear infinite',
+        'satellite-sweep': 'satelliteSweep 6s ease-in-out infinite',
+        'particle-float': 'particleFloat 8s ease-in-out infinite',
+        'scan-line': 'scanLine 3s linear infinite',
+        'shimmer': 'shimmer 1.5s ease-in-out infinite',
+        'card-enter': 'cardEnter 0.5s ease-out forwards',
+        'zoom-in': 'zoomIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
       },
       keyframes: {
         fadeIn: {
@@ -80,6 +95,55 @@ export default {
         },
         scaleIn: {
           '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        drift: {
+          '0%, 100%': { transform: 'translateY(0) translateX(0)' },
+          '33%': { transform: 'translateY(-4px) translateX(2px)' },
+          '66%': { transform: 'translateY(2px) translateX(-2px)' },
+        },
+        glowPulse: {
+          '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
+          '50%': { opacity: '0.8', transform: 'scale(1.05)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-8px)' },
+        },
+        breath: {
+          '0%, 100%': { opacity: '0.3' },
+          '50%': { opacity: '0.15' },
+        },
+        gridScroll: {
+          '0%': { transform: 'translateY(0)' },
+          '100%': { transform: 'translateY(40px)' },
+        },
+        satelliteSweep: {
+          '0%': { transform: 'translateX(-100%) translateY(-100%)', opacity: '0' },
+          '10%': { opacity: '1' },
+          '90%': { opacity: '1' },
+          '100%': { transform: 'translateX(100vw) translateY(100vh)', opacity: '0' },
+        },
+        particleFloat: {
+          '0%': { transform: 'translateY(0) translateX(0)', opacity: '0' },
+          '10%': { opacity: '1' },
+          '90%': { opacity: '1' },
+          '100%': { transform: 'translateY(-120px) translateX(20px)', opacity: '0' },
+        },
+        scanLine: {
+          '0%': { transform: 'translateY(-100vh)' },
+          '100%': { transform: 'translateY(10vh)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        cardEnter: {
+          '0%': { opacity: '0', transform: 'translateY(12px) scale(0.97)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        zoomIn: {
+          '0%': { opacity: '0', transform: 'scale(1.05)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
       },

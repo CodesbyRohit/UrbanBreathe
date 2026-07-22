@@ -1,14 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* Light mode contrast fix — only slate-400/500 MUST stay as CSS overrides because
-   they are used for both text (needs darkening) and bg/border (needs original value).
-   All other overrides are now in tailwind.config.js `theme.extend.colors`.
-   text-slate-400 = #94a3b8 (2.8:1 on white ✗) → #475569 (5.8:1 ✓)
-   text-slate-500 = #64748b (4.1:1 on white ✗) → #475569 (7.6:1 ✓)
-   Dark mode overrides (.theme-dark) below have higher specificity. */
+
+/* Light mode contrast fix */
 .text-slate-400 { color: #475569; }
 .text-slate-500 { color: #475569; }
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -18,8 +15,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
   /* ===== Theme System ===== */
-  /* Light mode: command-centre precision aesthetic (default) */
   :root,
   .theme-light {
     --surface: #ffffff;
@@ -30,8 +27,9 @@
     --text-muted: #475569;
     --border: #e2e8f0;
     --border-light: #f1f5f9;
+    --glow: rgba(59, 145, 232, 0.08);
+    --glow-strong: rgba(59, 145, 232, 0.15);
   }
-  /* Dark mode: operational command centre */
   .theme-dark {
     --surface: #0f172a;
     --surface-secondary: #1e293b;
@@ -41,8 +39,10 @@
     --text-muted: #94a3b8;
     --border: #334155;
     --border-light: #1e293b;
+    --glow: rgba(59, 145, 232, 0.12);
+    --glow-strong: rgba(59, 145, 232, 0.25);
   }
-  /* Dark mode overrides for existing components */
+
   .theme-dark body,
   .theme-dark .bg-white,
   .theme-dark .bg-slate-50 {
@@ -85,33 +85,188 @@
   .theme-dark .to-white {
     --tw-gradient-to: var(--surface);
   }
+
   /* ===== Custom scrollbar ===== */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { @apply bg-transparent; }
   ::-webkit-scrollbar-thumb { @apply bg-slate-300 rounded-full; }
   ::-webkit-scrollbar-thumb:hover { @apply bg-slate-400; }
-  /* Focus ring for accessibility */
-  /* Focus ring for accessibility — use brand-600 instead of brand-400 for 3:1 minimum on all surfaces */
+
+  /* Focus ring */
   *:focus-visible {
     outline: 2px solid #2563eb;
     outline-offset: 2px;
   }
-  /* Remove default select arrow */
+
   select {
     -webkit-appearance: none;
     -moz-appearance: none;
   }
-  /* Print-specific overrides */
+
   @media print {
     body { @apply bg-white; }
     .no-print { display: none !important; }
     .print-only { display: block !important; }
   }
   .print-only { display: none; }
-  /* ===== Loading skeleton animation ===== */
+
+  /* ===== Intro Background ===== */
+  .intro-gradient {
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 40%, rgba(59, 145, 232, 0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 50% at 30% 60%, rgba(59, 145, 232, 0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 70% 30%, rgba(59, 145, 232, 0.03) 0%, transparent 50%),
+      linear-gradient(180deg, #020617 0%, #0f172a 50%, #020617 100%);
+  }
+
+  /* Scan-line overlay */
+  .scan-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.015) 2px,
+      rgba(255, 255, 255, 0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Grid overlay */
+  .grid-overlay {
+    background-image:
+      linear-gradient(rgba(59, 145, 232, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 145, 232, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ===== Holographic Ring Button ===== */
+  .holographic-ring {
+    position: relative;
+    border-radius: 50%;
+    background: transparent;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .holographic-ring::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    padding: 2px;
+    background: conic-gradient(
+      from 0deg,
+      transparent,
+      rgba(59, 145, 232, 0.3),
+      rgba(59, 145, 232, 0.6),
+      rgba(59, 145, 232, 0.3),
+      transparent 60%,
+      transparent
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: ringRotate 4s linear infinite;
+  }
+  @keyframes ringRotate {
+    to { transform: rotate(360deg); }
+  }
+  .holographic-ring:hover::before {
+    background: conic-gradient(
+      from 0deg,
+      transparent,
+      rgba(59, 145, 232, 0.5),
+      rgba(96, 174, 239, 0.8),
+      rgba(59, 145, 232, 0.5),
+      transparent 60%,
+      transparent
+    );
+  }
+  .holographic-ring::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(59, 145, 232, 0.06) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .holographic-ring:hover::after {
+    opacity: 1;
+  }
+  .holographic-ring:active {
+    transform: scale(0.95);
+  }
+
+  /* ===== Microinteractions ===== */
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -6px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+    border-color: var(--glow-strong);
+  }
+  .card-hover:active {
+    transform: translateY(0) scale(0.99);
+  }
+  .theme-dark .card-hover:hover {
+    box-shadow: 0 8px 25px -6px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(59, 145, 232, 0.15);
+  }
+
+  /* ===== Glass effect ===== */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  .theme-dark .glass-panel {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* ===== Ambient dashboard background ===== */
+  .dashboard-ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .dashboard-ambient::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background:
+      radial-gradient(ellipse 40% 30% at 20% 50%, rgba(59, 145, 232, 0.03) 0%, transparent 60%),
+      radial-gradient(ellipse 30% 40% at 80% 30%, rgba(59, 145, 232, 0.02) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 50% at 50% 80%, rgba(59, 145, 232, 0.01) 0%, transparent 50%);
+    animation: ambientDrift 20s ease-in-out infinite;
+  }
+  @keyframes ambientDrift {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-2%, 1%); }
+    50% { transform: translate(1%, -1%); }
+    75% { transform: translate(-1%, 2%); }
+  }
+
+  /* ===== Particles ===== */
+  .particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: rgba(59, 145, 232, 0.4);
+    pointer-events: none;
+  }
+
+  /* ===== Skeleton ===== */
   @keyframes shimmer {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
@@ -122,15 +277,40 @@
     animation: shimmer 1.5s ease-in-out infinite;
     border-radius: 0.5rem;
   }
-  /* Scan line effect for boot sequence */
-  @keyframes scanLine {
-    0% { transform: translateY(-100vh); }
-    100% { transform: translateY(100vh); }
+  .theme-dark .skeleton {
+    background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
   }
-  .animate-scan-line {
-    animation: scanLine 3s linear infinite;
+
+  /* ===== Ripple effect ===== */
+  .ripple {
+    position: relative;
+    overflow: hidden;
+  }
+  .ripple::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255, 255, 255, 0.2) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .ripple:active::after {
+    opacity: 1;
+    transition: opacity 0s;
+  }
+
+  /* ===== City network lines (SVG animation) ===== */
+  .city-line {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: drawLine 3s ease-out forwards;
+  }
+  @keyframes drawLine {
+    to { stroke-dashoffset: 0; }
   }
 }
+
 @layer utilities {
   .text-balance { text-wrap: balance; }
 }

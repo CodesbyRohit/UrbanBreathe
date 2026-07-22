@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { getSpeechService } from '../../services/speechService';
-
-const STORAGE_KEY = 'urbanbreathe_boot_played';
+import AmbientBackground from './AmbientBackground';
 
 interface InitGateProps {
   onTap: () => void;
@@ -9,83 +8,111 @@ interface InitGateProps {
 
 export default function InitGate({ onTap }: InitGateProps) {
   const [fadingOut, setFadingOut] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const tappedRef = useRef(false);
+  // Speak welcome message once per session
+  const spokenRef = useRef(false);
 
-  // If boot has already played this session, skip the gate immediately
-  useEffect(() => {
-    if (sessionStorage.getItem(STORAGE_KEY)) {
-      onTap();
-    }
-  }, [onTap]);
-
-  const handleTap = () => {
+  const handleTap = useCallback(() => {
     if (fadingOut || tappedRef.current) return;
     tappedRef.current = true;
 
-    // Initialise the speech engine synchronously inside the user gesture.
-    // This primes Chrome's speech engine and begins loading voices so that
-    // BootSequence's timer-driven speak() calls work reliably.
+    // Initialise speech engine inside user gesture
     getSpeechService().init();
 
+    // Speak welcome immediately
+    if (!spokenRef.current) {
+      spokenRef.current = true;
+      getSpeechService().speak('Initializing UrbanBreathe command centre.');
+    }
+
     setFadingOut(true);
-    setTimeout(() => {
-      onTap();
-    }, 200);
+    setTimeout(() => onTap(), 600);
+  }, [fadingOut, onTap]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === 'Enter' || e.key === ' ') && !fadingOut && !tappedRef.current) {
+      tappedRef.current = true;
+      getSpeechService().init();
+      setFadingOut(true);
+      setTimeout(() => onTap(), 600);
+    }
   };
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 cursor-pointer transition-opacity duration-200 select-none ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center select-none transition-opacity duration-500 ${
         fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
+      style={{ cursor: fadingOut ? 'default' : 'pointer' }}
       onClick={handleTap}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTap(); }}
+      onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
-      aria-label="INITIALIZE SYSTEM — Tap anywhere to begin"
+      aria-label="INITIALIZE COMMAND CENTRE"
     >
-      {/* Scanning lines effect — matching BootSequence */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.03]">
-        <div className="w-full h-px bg-white animate-scan-line" />
-      </div>
+      {/* Immersive background */}
+      <AmbientBackground variant="intro" />
 
-      {/* Command centre radar icon */}
-      <div className="relative mb-8" aria-hidden="true">
-        <svg width="64" height="64" viewBox="0 0 64 64" className="animate-pulse-soft">
-          {/* Concentric rings — command centre aesthetic */}
-          <circle
-            cx="32" cy="32" r="28"
-            fill="none"
-            stroke="#1e293b"
-            strokeWidth="1"
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center">
+        {/* Holographic ring button */}
+        <div
+          className="holographic-ring flex items-center justify-center mb-10"
+          style={{ width: 140, height: 140 }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+        >
+          {/* Inner glow */}
+          <div
+            className="absolute inset-0 rounded-full transition-opacity duration-500"
+            style={{
+              background: `radial-gradient(circle, ${
+                hovered
+                  ? 'rgba(59, 145, 232, 0.15) 0%, rgba(59, 145, 232, 0.05) 50%, transparent 70%'
+                  : 'rgba(59, 145, 232, 0.08) 0%, transparent 60%'
+              })`,
+              transition: 'background 0.3s ease',
+            }}
           />
-          <circle
-            cx="32" cy="32" r="20"
-            fill="none"
-            stroke="#3b91e8"
-            strokeWidth="1.5"
-            opacity={0.6}
-          />
-          <circle
-            cx="32" cy="32" r="10"
-            fill="none"
-            stroke="#3b91e8"
-            strokeWidth="1"
-            opacity={0.3}
-          />
-          {/* Center dot */}
-          <circle cx="32" cy="32" r="3" fill="#3b91e8" opacity={0.8} />
-        </svg>
-      </div>
 
-      {/* Initialize prompt */}
-      <div className="font-mono text-center">
-        <p className="text-sm text-brand-400 tracking-[0.15em] animate-pulse-soft">
-          [ INITIALIZE SYSTEM ]
-        </p>
-        <p className="text-[10px] text-slate-600 mt-4 tracking-wider">
-          TAP ANYWHERE TO BEGIN
-        </p>
+          {/* Center SVG — animated radar rings */}
+          <div className="relative flex items-center justify-center" aria-hidden="true">
+            <svg width="56" height="56" viewBox="0 0 56 56" className="animate-float">
+              <circle cx="28" cy="28" r="24" fill="none" stroke="#1e293b" strokeWidth="1" />
+              <circle
+                cx="28" cy="28" r="16"
+                fill="none"
+                stroke="#3b91e8"
+                strokeWidth="1.5"
+                opacity={0.6}
+                className="animate-spin-slow"
+                style={{ transformOrigin: 'center' }}
+              />
+              <circle cx="28" cy="28" r="8" fill="none" stroke="#3b91e8" strokeWidth="1" opacity={0.3} />
+              <circle cx="28" cy="28" r="3" fill="#60aeef" opacity={0.9}>
+                <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="r" values="2;4;2" dur="2s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+          </div>
+        </div>
+
+        {/* Title text */}
+        <div className="font-mono text-center">
+          <p className="text-sm text-brand-400 tracking-[0.15em] animate-pulse-soft">
+            [ INITIALIZE COMMAND CENTRE ]
+          </p>
+          <p className="text-[10px] text-slate-500 mt-4 tracking-wider animate-fade-in" style={{ animationDelay: '0.5s' }}>
+            TAP ANYWHERE TO BEGIN
+          </p>
+        </div>
+
+        {/* Bottom status */}
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 text-[10px] text-slate-700 font-mono tracking-wider animate-fade-in" style={{ animationDelay: '1s' }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse-soft" />
+          SYSTEM STANDBY
+        </div>
       </div>
     </div>
   );

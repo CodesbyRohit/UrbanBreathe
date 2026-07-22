@@ -7,6 +7,7 @@ import BootSequence from './BootSequence';
 import InitGate from './InitGate';
 import CompactLanding from '../landing/CompactLanding';
 import ImpactSection from '../landing/ImpactSection';
+import AmbientBackground from './AmbientBackground';
 import { Menu, Loader } from 'lucide-react';
 import type { NavSection } from '../../utils/constants';
 import { useCities, useAirQuality } from '../../hooks/useCityData';
@@ -14,7 +15,6 @@ import { useTheme } from '../../hooks/useTheme';
 import { getAirQuality } from '../../services/api';
 import type { AirQualityData } from '../../types';
 
-// Lazy-loaded modules for code-splitting
 const LiveMonitoring = lazy(() => import('../dashboard/LiveMonitoring'));
 const SourceAttribution = lazy(() => import('../source-attribution/SourceAttribution'));
 const PredictiveIntelligence = lazy(() => import('../forecast/PredictiveIntelligence'));
@@ -41,8 +41,10 @@ export default function AppShell() {
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [showInitGate, setShowInitGate] = useState(() => !sessionStorage.getItem('urbanbreathe_boot_played'));
+  // Always show InitGate on every page load — no cached state
+  const [showInitGate, setShowInitGate] = useState(true);
   const [showBoot, setShowBoot] = useState(false);
+  const [enterZoom, setEnterZoom] = useState(false);
   const [showLanding, setShowLanding] = useState(false);
   const lastUpdatedRef = useRef<string | null>(null);
   const { theme, toggleTheme, isDark } = useTheme();
@@ -50,7 +52,6 @@ export default function AppShell() {
   const selectedCity = cities.find(c => c.id === selectedCityId) || null;
   const { data: airQuality, loading: aqLoading, refresh: refreshAQ } = useAirQuality(selectedCity);
 
-  // Track all air quality data for map and snapshot views
   const [airQualityMap, setAirQualityMap] = useState<Record<string, AirQualityData | null>>({});
 
   useEffect(() => {
@@ -65,11 +66,9 @@ export default function AppShell() {
     }
   }, [airQuality, cities, selectedCity, aqLoading]);
 
-  // Fetch air quality for all cities on mount (approximate for snapshot)
   useEffect(() => {
     if (cities.length === 0) return;
     const fetchAll = async () => {
-      /* getAirQuality imported statically at top of file */
       const results = await Promise.allSettled(
         cities.map(c => getAirQuality(c.id, c.lat, c.lon).then(d => ({ id: c.id, data: d })))
       );
@@ -92,7 +91,6 @@ export default function AppShell() {
 
   const handleCitySelect = useCallback((id: string) => {
     setSelectedCityId(id);
-    // Keep dashboard active when selecting from map
   }, []);
 
   const handleNavigate = useCallback((section: NavSection) => {
@@ -102,7 +100,6 @@ export default function AppShell() {
     if (window.innerWidth < 768) setSidebarOpen(false);
   }, []);
 
-  // Compute snapshot stats from real air quality data
   const worstCity = (() => {
     let worst: { name: string; aqi: number } | null = null;
     Object.entries(airQualityMap).forEach(([id, data]) => {
@@ -123,16 +120,23 @@ export default function AppShell() {
     anomalyMap[id] = data?.anomaly?.isAnomaly ?? false;
   });
 
-  // InitGate → BootSequence → CompactLanding → Dashboard
+  // InitGate → BootSequence → dashboard with zoom-in
   if (showInitGate) {
     return <InitGate onTap={() => { setShowInitGate(false); setShowBoot(true); }} />;
   }
 
   if (showBoot) {
-    return <BootSequence onComplete={() => setShowBoot(false)} />;
+    return (
+      <BootSequence
+        onComplete={() => {
+          setShowBoot(false);
+          setEnterZoom(true);
+          setTimeout(() => setEnterZoom(false), 900); // buffer past 0.8s animation
+        }}
+      />
+    );
   }
 
-  // Compact landing view — merges hero + stats + map + impact into one view
   if (showLanding) {
     return (
       <CompactLanding
@@ -149,7 +153,6 @@ export default function AppShell() {
     );
   }
 
-  // Show initial skeleton only on first page load
   if (initialLoading && !airQuality && cities.length === 0) {
     return <InitialLoadingSkeleton />;
   }
@@ -157,24 +160,26 @@ export default function AppShell() {
   const renderSection = () => {
     const section = (() => {
       switch (activeSection) {
-        case 'dashboard': return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
-        case 'sources': return <SourceAttribution cityId={selectedCityId} />;
-        case 'forecast': return <PredictiveIntelligence cityId={selectedCityId} />;
-        case 'simulator': return <PolicySimulator cityId={selectedCityId} />;
-        case 'enforcement': return <EnforcementIntelligence cities={cities} airQualityMap={airQualityMap} />;
-        case 'comparative': return <ComparativeIntelligence cities={cities} airQualityMap={airQualityMap} />;
-        case 'brief': return <ExecutiveBrief cityId={selectedCityId} />;
-        case 'advisory': return <CitizenAdvisory cityId={selectedCityId} />;
-        default: return <LiveMonitoring city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
+        case 'dashboard': return <LiveMonitoring key="dashboard" city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
+        case 'sources': return <SourceAttribution key="sources" cityId={selectedCityId} />;
+        case 'forecast': return <PredictiveIntelligence key="forecast" cityId={selectedCityId} />;
+        case 'simulator': return <PolicySimulator key="simulator" cityId={selectedCityId} />;
+        case 'enforcement': return <EnforcementIntelligence key="enforcement" cities={cities} airQualityMap={airQualityMap} />;
+        case 'comparative': return <ComparativeIntelligence key="comparative" cities={cities} airQualityMap={airQualityMap} />;
+        case 'brief': return <ExecutiveBrief key="brief" cityId={selectedCityId} />;
+        case 'advisory': return <CitizenAdvisory key="advisory" cityId={selectedCityId} />;
+        default: return <LiveMonitoring key="dashboard" city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
       }
     })();
     return <Suspense fallback={<ModuleFallback />}>{section}</Suspense>;
   };
 
-  // Dashboard/command centre view
+  // Dashboard view with zoom-in entrance
   return (
-    <div className="flex h-screen bg-slate-50">
-      {/* Skip-to-content link for accessibility */}
+    <div className={`flex h-screen bg-slate-50 ${enterZoom ? 'animate-zoom-in' : ''}`}>
+      {/* Ambient background behind dashboard */}
+      <AmbientBackground variant="dashboard" />
+
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium"
@@ -184,8 +189,7 @@ export default function AppShell() {
 
       <Sidebar activeSection={activeSection} onSectionChange={handleNavigate} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar: mobile hamburger + Header */}
+      <div className="flex-1 flex flex-col min-w-0 relative z-10">
         <div className="bg-white px-4 md:px-6 py-3 flex items-center gap-3 border-b border-slate-200">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -205,8 +209,7 @@ export default function AppShell() {
           />
         </div>
 
-        <main id="main-content" className="flex-1 overflow-auto">
-          {/* City selector + India Map row */}
+        <main id="main-content" className="flex-1 overflow-auto relative">
           <div className="px-4 md:px-6 py-4 border-b border-slate-100 bg-white">
             <div className="flex items-center justify-between mb-4">
               <CitySelector cities={cities} selectedId={selectedCityId} onSelect={setSelectedCityId} />
@@ -218,7 +221,6 @@ export default function AppShell() {
               anomalyMap={anomalyMap}
               onSelect={handleCitySelect}
             />
-            {/* Impact section */}
             <ImpactSection activeAnomalies={activeAnomalies} onNavigate={handleNavigate} />
           </div>
           <div className="px-4 md:px-6 pb-8 animate-fade-in">
@@ -280,7 +282,7 @@ function InitialLoadingSkeleton() {
               </div>
               <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 animate-pulse-soft" style={{ animationDelay: `${i * 60}ms` }}>
+                  <div key={i} className="bg-white rounded-xl border border-slate-200 p-4" style={{ animationDelay: `${i * 60}ms` }}>
                     <div className="skeleton w-14 h-3 mb-3" />
                     <div className="skeleton w-10 h-6 mb-2" />
                     <div className="skeleton w-16 h-3" />

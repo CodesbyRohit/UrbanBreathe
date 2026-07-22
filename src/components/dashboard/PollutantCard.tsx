@@ -47,7 +47,7 @@ export default function PollutantCard({ pollutant, data }: PollutantCardProps) {
 
   return (
     <div
-      className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-lg hover:border-slate-300 transition-all duration-200 relative"
+      className="bg-white rounded-xl border border-slate-200 p-4 card-hover relative"
       onMouseEnter={() => setShowDetail(true)}
       onMouseLeave={() => setShowDetail(false)}
       onFocus={() => setShowDetail(true)}

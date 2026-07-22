@@ -31,7 +31,7 @@ export default function MetricCard({
     trend === 'stable' ? 'text-slate-500' : '';
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-3 hover:shadow-md hover:border-slate-300 transition-all duration-200">
+    <div className="bg-white rounded-xl border border-slate-200 p-3 card-hover">
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">{label}</span>
         {icon && <span className="text-slate-400">{icon}</span>}
