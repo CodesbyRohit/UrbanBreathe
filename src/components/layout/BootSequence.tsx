@@ -45,11 +45,13 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
     setVoiceSupported(getSpeechService().supported);
   }, []);
 
-  // ─── Boot Sequence (no sessionStorage caching — plays every time) ───────
-  // Note: The welcome message ("Initializing UrbanBreathe command centre.")
-  // is spoken in InitGate's init() call, which happens synchronously inside
-  // the user gesture. This means subsequent async speak() calls here will
-  // work because Chrome's audio pipeline is already unlocked.
+  // ─── Boot Sequence (plays every page load — no session caching) ─────────
+  // Speech lifecycle:
+  //   InitGate.init('Initializing...') queues the welcome utterance →
+  //     onend → next() → dequeues first module utterance →
+  //     onend → next() → ... → "Welcome, commander." → onend → queue empty
+  //   No cancel() calls happen between utterances.
+  //   The only cancel() sources are explicit: Skip button or Mute toggle.
 
   useEffect(() => {
     if (completedRef.current) return;
@@ -63,7 +65,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
           setProgress(((index + 1) / SYSTEM_MODULES.length) * 100);
           setActiveModule(null);
 
-          // Speak module status
+          // Queue module status — will play after the welcome finishes
           if (!voiceMutedRef.current) {
             getSpeechService().speak(`${mod.label} ${mod.status}`);
           }
@@ -76,6 +78,8 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
     const completeTimer = setTimeout(() => handleComplete(), BOOT_DURATION);
     timersRef.current.push(completeTimer);
 
+    // Cleanup: only clear timers. Do NOT cancel speech — the queue
+    // drains naturally, and "Welcome, commander." should play fully.
     return () => timersRef.current.forEach(t => clearTimeout(t));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -107,11 +111,14 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
     if (willMute) getSpeechService().cancel();
   }, [voiceMuted]);
 
-  // ─── Cleanup ───────────────────────────────────────────────────────────────
+  // ─── Cleanup: timers only, no speech cancel ────────────────────────────
+  // IMPORTANT: Do NOT add getSpeechService().cancel() here.
+  // The queue drains naturally via onend chaining. Cancelling here would
+  // cut off "Welcome, commander." which is still in the queue when the
+  // boot completes and the component unmounts.
 
   useEffect(() => {
     return () => {
-      getSpeechService().cancel();
       timersRef.current.forEach(t => clearTimeout(t));
     };
   }, []);
@@ -149,7 +156,6 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
           {SYSTEM_MODULES.map((mod, index) => {
             const isCompleted = completedModules.includes(index);
             const isActive = activeModule === index;
-            const isPending = !isCompleted && !isActive;
 
             return (
               <div

@@ -1,15 +1,31 @@
 /**
- * SpeechService — singleton promise-based speech synthesis service.
+ * SpeechService — utterance-queue-based speech synthesis service.
  *
- * Key design decisions:
- * 1. Must be initialised inside a user gesture (click handler).
- * 2. The first `init()` call speaks the welcome text SYNCHRONOUSLY so it
- *    stays within the user gesture — this is critical for Chrome, which
- *    silently blocks speechSynthesis.speak() calls from non-gesture contexts.
- * 3. Pre-loads and caches voices so subsequent async speak() calls work.
- * 4. Always calls speechSynthesis.cancel() before queuing new speech.
- * 5. Never reuses utterance objects.
- * 6. Fails silently — never throws, never logs.
+ * Design principles:
+ *
+ * 1. QUEUE, NEVER CANCEL
+ *    `speak()` adds an utterance to a FIFO queue. The current utterance
+ *    is NEVER interrupted. Only explicit calls to `cancel()` (Skip, Mute,
+ *    page navigation) stop the current utterance and purge the queue.
+ *
+ * 2. `onend` CHAINING
+ *    Each utterance has an `onend` handler that calls `next()`, which
+ *    dequeues the next utterance and speaks it. This guarantees no
+ *    overlap between utterances and every utterance plays to completion.
+ *
+ * 3. GESTURE-FIRST INIT
+ *    `init(firstText?)` must be called from a user gesture. It queues the
+ *    welcome text and immediately calls `next()`, so the first
+ *    `speechSynthesis.speak()` fires synchronously inside the gesture.
+ *    This satisfies Chrome's autoplay policy (critical for Incognito).
+ *
+ * 4. NO ASYNC/AWAIT IN SPEAK
+ *    Voice loading is fire-and-forget. If voices arrive after the welcome
+ *    has started, they're cached for subsequent utterances. The welcome
+ *    plays with the default voice if no cache is available — this is fine.
+ *
+ * 5. SILENT FAILURE
+ *    Never throws, never logs.
  */
 
 type VoicePreference = 'male' | 'female' | 'auto';
@@ -18,21 +34,30 @@ const PREFERRED_VOICE_NAMES = ['google uk english male', 'david', 'daniel', 'jam
 
 class SpeechService {
   private voices: SpeechSynthesisVoice[] | null = null;
-  private voicesPromise: Promise<SpeechSynthesisVoice[]> | null = null;
   private _initialized = false;
   private destroyed = false;
+
+  /** FIFO queue of utterances waiting to be spoken. */
+  private queue: SpeechSynthesisUtterance[] = [];
+
+  /**
+   * true while an utterance is actively being spoken by the browser.
+   * Prevents `next()` from processing the queue while speech is active.
+   */
+  private speaking = false;
 
   // ── Initialisation ──────────────────────────────────────────────────────
 
   /**
    * Must be called from within a user gesture (click/tap/keydown handler).
    *
-   * - Primes Chrome's speech engine by speaking `firstText` immediately
-   *   (synchronously, inside the gesture). This is ESSENTIAL for Incognito
-   *   where voice data is never cached and the async path would push the
-   *   speechSynthesis.speak() call outside the gesture where Chrome blocks it.
-   * - Begins asynchronous voice loading for subsequent speak() calls.
-   * - Safe to call multiple times — only the first call takes effect.
+   * - Resets any stale browser speech state and clears the internal queue.
+   * - Begins asynchronous voice loading (fire-and-forget; cached for later).
+   * - If `firstText` is provided, queues it and immediately calls `next()`.
+   *   The first `speechSynthesis.speak()` therefore fires synchronously
+   *   inside the gesture, satisfying Chrome's autoplay policy.
+   *
+   * Safe to call multiple times — only the first call with text takes effect.
    */
   init(firstText?: string): void {
     if (this._initialized || this.destroyed) return;
@@ -40,146 +65,172 @@ class SpeechService {
 
     this._initialized = true;
 
-    // Cancel any leftover speech from a previous lifecycle
+    // Fresh start — cancel any stale audio left from a previous page lifecycle
     window.speechSynthesis.cancel();
 
-    // Check for synchronously available voices (cached by Chrome)
+    // Reset internal state
+    this.queue = [];
+    this.speaking = false;
+
+    // Load voices: synchronous if cached, async (fire-and-forget) if not
     const immediate = window.speechSynthesis.getVoices();
     if (immediate.length > 0) {
       this.voices = immediate;
     } else {
-      // Start async voice loading for subsequent speak() calls
-      this.voicesPromise = this.loadVoices();
+      // Fire-and-forget — results are cached in this.voices when loaded
+      this.startLoadingVoices();
     }
 
-    // ── Speak the first text NOW, inside the user gesture ───────────────
-    // This is the critical fix for Incognito/private browsing.
-    // Chrome requires the FIRST speechSynthesis.speak() to happen within
-    // a user gesture. In Incognito, voice data is never cached, so the
-    // async voice-loading path would cause the actual speak() to fire
-    // outside the gesture — Chrome silently blocks it.
-    //
-    // By speaking synchronously here (even without a preferred voice),
-    // we unlock Chrome's audio pipeline. Voices will be selected for
-    // subsequent speak() calls when they become available.
+    // Queue the first utterance (plays immediately via next())
     if (firstText) {
-      const utterance = this.makeUtterance(firstText);
-      // If voices are cached, apply the preferred voice immediately
-      if (this.voices) {
-        const preferred = this.pickVoice(this.voices);
-        if (preferred) utterance.voice = preferred;
-      }
-      window.speechSynthesis.speak(utterance);
-    } else {
-      // No text provided — prime the engine with a silent utterance
-      // BUT do NOT cancel it (cancelling mid-init breaks Chrome's engine).
-      const unlock = new SpeechSynthesisUtterance(' ');
-      window.speechSynthesis.speak(unlock);
+      this.enqueue(firstText);
     }
-  }
-
-  private async loadVoices(): Promise<SpeechSynthesisVoice[]> {
-    const existing = window.speechSynthesis.getVoices();
-    if (existing.length > 0) {
-      this.voices = existing;
-      return existing;
-    }
-
-    // Chrome loads voices asynchronously — wait for the voiceschanged event.
-    return new Promise((resolve) => {
-      const onChanged = () => {
-        const result = window.speechSynthesis.getVoices();
-        if (result.length > 0) {
-          this.voices = result;
-          window.speechSynthesis.removeEventListener('voiceschanged', onChanged);
-          resolve(result);
-        }
-      };
-      window.speechSynthesis.addEventListener('voiceschanged', onChanged);
-
-      // Safety net: re-trigger getVoices() after a timeout in case the event
-      // never fires.
-      setTimeout(() => {
-        const result = window.speechSynthesis.getVoices();
-        if (result.length > 0) {
-          this.voices = result;
-          window.speechSynthesis.removeEventListener('voiceschanged', onChanged);
-          resolve(result);
-        }
-      }, 1000);
-    });
-  }
-
-  // ── Public API ──────────────────────────────────────────────────────────
-
-  /**
-   * Wait until voices are available (cached or freshly loaded).
-   */
-  async ensureVoices(): Promise<SpeechSynthesisVoice[]> {
-    if (this.destroyed) return [];
-    if (this.voices) return this.voices;
-    if (!this.voicesPromise) {
-      this.voicesPromise = this.loadVoices();
-    }
-    return this.voicesPromise;
   }
 
   /**
-   * Speak a line of synthetic speech.
+   * Speak (enqueue) a line of synthetic speech.
    *
-   * - Cancels any in-progress utterance first (including the firstText
-   *   spoken during init()).
-   * - Waits for voices to be ready before speaking.
-   * - Creates a brand-new utterance object every call.
-   * - Returns true if speech was queued, false if unsupported.
-   * - Never throws.
+   * - Does NOT cancel any in-progress utterance.
+   * - Adds the text to the FIFO queue. When the current utterance finishes,
+   *   `onend` fires, `next()` dequeues this one, and it plays.
+   * - Returns true if the utterance was queued, false if unsupported.
    */
-  async speak(
-    text: string,
-    preference: VoicePreference = 'auto',
-  ): Promise<boolean> {
-    if (this.destroyed) return false;
-    if (!this.supported) return false;
-
-    try {
-      window.speechSynthesis.cancel();
-
-      const voices = await this.ensureVoices();
-      if (this.destroyed) return false;
-
-      const utterance = this.makeUtterance(text);
-      const preferred = this.pickVoice(voices, preference);
-      if (preferred) utterance.voice = preferred;
-
-      window.speechSynthesis.speak(utterance);
-      return true;
-    } catch (_) {
-      return false;
-    }
+  speak(text: string): boolean {
+    if (this.destroyed || !this.supported) return false;
+    this.enqueue(text);
+    return true;
   }
 
   /**
-   * Immediately cancel any in-progress speech.
+   * Immediately stop current speech, clear the queue, and reset state.
+   * Only call for explicit user actions (Skip, Mute) or teardown.
    */
   cancel(): void {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch (_) {
-        // Swallow
-      }
+    this.queue = [];
+    this.speaking = false;
+    try {
+      window.speechSynthesis.cancel();
+    } catch (_) {
+      // Swallow
     }
   }
 
   /**
-   * Tear down the service. Cancels speech, clears caches, removes listeners.
+   * Full teardown. Call on component unmount or test cleanup.
    */
   destroy(): void {
     this.destroyed = true;
     this.cancel();
     this.voices = null;
-    this.voicesPromise = null;
     this._initialized = false;
+  }
+
+  // ── Internal Queue ──────────────────────────────────────────────────────
+
+  /**
+   * Create an utterance, wire onend/onerror handlers, push to queue,
+   * and start processing if no utterance is currently speaking.
+   */
+  private enqueue(text: string): void {
+    const utterance = this.makeUtterance(text);
+
+    // Assign voice immediately if already loaded
+    if (this.voices) {
+      const preferred = this.pickVoice(this.voices);
+      if (preferred) utterance.voice = preferred;
+    }
+
+    // Chain: when this utterance finishes naturally, process the next one.
+    utterance.onend = () => this.next();
+    utterance.onerror = () => this.next();
+
+    this.queue.push(utterance);
+
+    // If the engine is idle, start speaking immediately.
+    if (!this.speaking) {
+      this.next();
+    }
+  }
+
+  /**
+   * Dequeue the next utterance and speak it.
+   *
+   * Called by:
+   * - `onend` / `onerror` of the previous utterance
+   * - `init()` / `enqueue()` when the engine was idle
+   *
+   * Chrome bug workaround:
+   * After `onend` fires, `speechSynthesis.speaking` may still be `true`
+   * momentarily. Calling `speak()` in this state throws or silently fails.
+   * We detect this and defer to a microtask (Promise.resolve().then()),
+   * which is a standard JavaScript pattern — NOT a setTimeout workaround.
+   */
+  private next(): void {
+    if (this.destroyed) return;
+
+    // Chrome: after onend, the engine may still report 'speaking'.
+    // Defer to a microtask to let the engine settle completely.
+    if (window.speechSynthesis.speaking) {
+      Promise.resolve().then(() => this.next());
+      return;
+    }
+
+    while (this.queue.length > 0) {
+      const utterance = this.queue.shift()!;
+
+      // Assign voice if it arrived while the previous utterance was playing
+      if (!utterance.voice && this.voices) {
+        const preferred = this.pickVoice(this.voices);
+        if (preferred) utterance.voice = preferred;
+      }
+
+      try {
+        window.speechSynthesis.speak(utterance);
+        this.speaking = true;
+        return; // One utterance per next() call
+      } catch (_) {
+        // Utterance failed silently — try the next one in the queue
+        continue;
+      }
+    }
+
+    this.speaking = false;
+  }
+
+  // ── Voice Loading (Fire-and-Forget) ─────────────────────────────────────
+
+  private async startLoadingVoices(): Promise<void> {
+    // Some browsers (Firefox) load voices synchronously
+    const existing = window.speechSynthesis.getVoices();
+    if (existing.length > 0) {
+      this.voices = existing;
+      return;
+    }
+
+    // Chrome loads voices asynchronously — wait for the voiceschanged event.
+    // The Promise is never awaited; it's just a firing mechanism that sets
+    // this.voices when voices arrive. Subsequent next() calls will pick them up.
+    return new Promise<void>((resolve) => {
+      const onChanged = () => {
+        const result = window.speechSynthesis.getVoices();
+        if (result.length > 0) {
+          this.voices = result;
+          window.speechSynthesis.removeEventListener('voiceschanged', onChanged);
+          resolve();
+        }
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', onChanged);
+
+      // Safety net: poll after a timeout in case the event never fires
+      setTimeout(() => {
+        const result = window.speechSynthesis.getVoices();
+        if (result.length > 0) {
+          this.voices = result;
+          window.speechSynthesis.removeEventListener('voiceschanged', onChanged);
+          resolve();
+        }
+      }, 1500);
+    });
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
