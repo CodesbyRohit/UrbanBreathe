@@ -575,7 +575,7 @@ While the analysis components are heuristic (as disclosed above), several module
 | ♿ Accessibility | **100/100** |
 | 🏆 Best Practices | **100/100** |
 | 🔍 SEO | **100/100** |
-| ⚡ Performance | **83/100** |
+| ⚡ Performance | **94/100** |
 | ✅ TypeScript errors | **Zero** |
 | 🔇 Console warnings | **Zero** |
 | 📦 Source files | **55+ TypeScript/React + Express backend** |
