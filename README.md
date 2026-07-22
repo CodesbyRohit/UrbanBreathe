@@ -65,54 +65,6 @@ Built for the **ET AI Hackathon 2.0 — Grand Finale**.
 | **Comparative Intelligence** | Cross-city AQI ranking and trend comparison |
 | **Enforcement Intelligence** | Deterministic anomaly detection with drill-down analytics |
 
----
-
-## Screenshots
-
-<div align="center">
-  <img src="docs/images/command-centre.png" alt="Command Centre — Initialization Screen" width="700" />
-  <br/>
-  <em>Command Centre — Cinematic InitGate with holographic activation ring</em>
-</div>
-
-<br/>
-
-<div align="center">
-  <img src="docs/images/live-monitoring.png" alt="Live Monitoring Dashboard" width="700" />
-  <br/>
-  <em>Live Monitoring — Real-time AQI gauge, pollutant cards, and weather overlay</em>
-</div>
-
-<br/>
-
-<div align="center">
-  <img src="docs/images/policy-simulator.png" alt="Policy Intervention Simulator" width="700" />
-  <br/>
-  <em>Policy Simulator — Test 8 intervention types with projected impact metrics</em>
-</div>
-
-<br/>
-
-<div align="center">
-  <img src="docs/images/executive-brief.png" alt="Executive Decision Brief" width="700" />
-  <br/>
-  <em>Executive Brief — Auto-generated government-ready situational report</em>
-</div>
-
-> **Note:** Add actual screenshots to `docs/images/` before submission. Replace the placeholder paths above.
-
----
-
-## 🎥 Demo Video
-
-[![UrbanBreathe Demo](https://img.shields.io/badge/Watch%20Demo-UrbanBreathe-3b91e8?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/your-demo-link)
-
-Watch a 3-minute walkthrough demonstrating the complete operational workflow — from command centre initialization through live monitoring, source attribution, policy simulation, and executive briefing.
-
-*(Replace the link above with your hackathon submission video.)*
-
----
-
 ## Features
 
 ### 🎬 InitGate + Voice Boot Sequence
