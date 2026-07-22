@@ -41,10 +41,8 @@ export default function AppShell() {
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  // Always show InitGate on every page load — no cached state
   const [showInitGate, setShowInitGate] = useState(true);
   const [showBoot, setShowBoot] = useState(false);
-  const [enterZoom, setEnterZoom] = useState(false);
   const [showLanding, setShowLanding] = useState(false);
   const lastUpdatedRef = useRef<string | null>(null);
   const { theme, toggleTheme, isDark } = useTheme();
@@ -120,7 +118,7 @@ export default function AppShell() {
     anomalyMap[id] = data?.anomaly?.isAnomaly ?? false;
   });
 
-  // InitGate → BootSequence → dashboard with zoom-in
+  // InitGate → BootSequence → dashboard
   if (showInitGate) {
     return <InitGate onTap={() => { setShowInitGate(false); setShowBoot(true); }} />;
   }
@@ -130,8 +128,6 @@ export default function AppShell() {
       <BootSequence
         onComplete={() => {
           setShowBoot(false);
-          setEnterZoom(true);
-          setTimeout(() => setEnterZoom(false), 900); // buffer past 0.8s animation
         }}
       />
     );
@@ -174,10 +170,8 @@ export default function AppShell() {
     return <Suspense fallback={<ModuleFallback />}>{section}</Suspense>;
   };
 
-  // Dashboard view with zoom-in entrance
   return (
-    <div className={`flex h-screen bg-slate-50 ${enterZoom ? 'animate-zoom-in' : ''}`}>
-      {/* Ambient background behind dashboard */}
+    <div className="flex h-screen bg-slate-50">
       <AmbientBackground variant="dashboard" />
 
       <a
