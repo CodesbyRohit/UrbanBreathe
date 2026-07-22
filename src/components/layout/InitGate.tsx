@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { getSpeechService } from '../../services/speechService';
 import AmbientBackground from './AmbientBackground';
 
