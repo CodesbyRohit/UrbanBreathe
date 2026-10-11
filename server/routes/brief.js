@@ -3,14 +3,17 @@ import { generateExecutiveBrief } from '../services/briefGenerator.js';
 import { getFallbackData } from '../services/openMeteoService.js';
 import { calculateSourceAttribution } from '../services/sourceAttribution.js';
 import { generateForecast } from '../services/forecastService.js';
-import { runSimulation } from '../services/simulationEngine.js';
+import { runSimulation, getInterventions } from '../services/simulationEngine.js';
+import { resolveCity, validateInterventionIds } from '../http/validation.js';
 
 const router = Router();
 
-router.post('/generate', (req, res) => {
+router.post('/generate', (req, res, next) => {
   try {
-    const { cityId, interventions } = req.body;
-    if (!cityId) return res.status(400).json({ error: 'cityId required' });
+    const { cityId } = resolveCity(req.body?.cityId);
+    const interventions = req.body?.interventions === undefined
+      ? []
+      : validateInterventionIds(req.body.interventions, getInterventions().map(iv => iv.id), { min: 0 });
 
     const data = getFallbackData(cityId);
     const sources = calculateSourceAttribution(data);
@@ -22,7 +25,7 @@ router.post('/generate', (req, res) => {
     const brief = generateExecutiveBrief(cityId, data, sources, forecast, simulation);
     res.json(brief);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

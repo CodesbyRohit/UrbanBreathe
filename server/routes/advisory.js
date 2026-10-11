@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { cityParam } from '../http/validation.js';
 import { getAQICategory, getHealthAdvisory } from '../utils/calculations.js';
 import { getFallbackData } from '../services/openMeteoService.js';
 
@@ -13,9 +14,9 @@ const ADVISORY_LEVELS = {
   Severe: { color: '#7c3aed', icon: 'x-circle', precautions: ['Stay indoors', 'Use HEPA purifiers', 'Seek medical help if symptomatic', 'Avoid any outdoor movement'], sensitive: ['ALL POPULATION GROUPS'] },
 };
 
-router.get('/:cityId', (req, res) => {
+router.get('/:cityId', cityParam, (req, res, next) => {
   try {
-    const { cityId } = req.params;
+    const cityId = req.city.id;
     const data = getFallbackData(cityId);
     const category = getAQICategory(data.pm25 ? Math.min(500, Math.round(data.pm25 * 1.5)) : 150);
     const advisory = {
@@ -40,7 +41,7 @@ router.get('/:cityId', (req, res) => {
     };
     res.json(advisory);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
