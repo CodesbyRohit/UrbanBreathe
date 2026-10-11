@@ -1,18 +1,14 @@
 import { Router } from 'express';
-import { calculateSourceAttribution } from '../services/sourceAttribution.js';
-import { getFallbackData } from '../services/openMeteoService.js';
+import { loadCityContext } from '../services/cityAirQuality.js';
+import { buildSourceContext } from '../services/sourceIndicators.js';
+import { cityParam } from '../http/validation.js';
+import { asyncHandler } from '../http/errors.js';
 
 const router = Router();
 
-router.get('/:cityId', (req, res) => {
-  try {
-    const { cityId } = req.params;
-    const data = getFallbackData(cityId);
-    const attribution = calculateSourceAttribution(data);
-    res.json(attribution);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/:cityId', cityParam, asyncHandler(async (req, res) => {
+  const ctx = await loadCityContext(req.city);
+  res.json(buildSourceContext(ctx));
+}));
 
 export default router;

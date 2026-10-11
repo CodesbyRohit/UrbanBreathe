@@ -7,7 +7,7 @@ interface IndiaMapProps {
   cities: City[];
   selectedId: string;
   airQualityMap: Record<string, AirQualityData | null>;
-  anomalyMap: Record<string, boolean>;
+  anomalyMap?: Record<string, boolean>;
   onSelect: (id: string) => void;
   compact?: boolean;
 }
@@ -68,7 +68,7 @@ function getLabelOffset(pos: CityPosition, allPositions: CityPosition[]): { dy: 
 }
 
 export default function IndiaMap({
-  cities, selectedId, airQualityMap, anomalyMap, onSelect, compact,
+  cities, selectedId, airQualityMap, anomalyMap = {}, onSelect, compact,
 }: IndiaMapProps) {
   const positions = useMemo(() => computeCityPositions(cities), [cities]);
   // Memoized per-city AQI colors — avoids re-calling getAQIColor on every render
@@ -76,8 +76,8 @@ export default function IndiaMap({
     const map: Record<string, string> = {};
     for (const city of cities) {
       const aqData = airQualityMap[city.id];
-      const aqi = aqData?.aqi ?? city.baseAQI ?? 150;
-      map[city.id] = getAQIColor(aqi);
+      // No estimate -> neutral grey; never substitute a made-up baseline value.
+      map[city.id] = getAQIColor(aqData?.aqi ?? null);
     }
     return map;
   }, [cities, airQualityMap]);
@@ -90,13 +90,10 @@ export default function IndiaMap({
           <h2 className="text-sm font-semibold text-slate-700">City Network</h2>
         </div>
         <div className="flex items-center gap-3 text-[10px] text-slate-400">
+          <span>Colour = NAQI estimate category (modelled)</span>
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-red-500" /> 
-            Anomaly
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-slate-300" /> 
-            Normal
+            <span className="w-2 h-2 rounded-full bg-slate-500" />
+            No estimate
           </span>
         </div>
       </div>
@@ -121,7 +118,7 @@ export default function IndiaMap({
           {positions.map(pos => {
             const city = cities.find(c => c.id === pos.id);
             const aqData = city ? airQualityMap[city.id] : null;
-            const aqi = aqData?.aqi ?? (city?.baseAQI ?? 150);
+            const aqi = aqData?.aqi ?? null;
             const isAnomaly = anomalyMap[pos.id] ?? false;
             const isSelected = pos.id === selectedId;
             const color = cityColors[pos.id];
@@ -132,7 +129,7 @@ export default function IndiaMap({
                 onClick={() => onSelect(pos.id)}
                 className="cursor-pointer"
                 role="button"
-                aria-label={`${pos.name}, AQI ${aqi}`}
+                aria-label={`${pos.name}, NAQI estimate ${aqi ?? 'unavailable'}`}
                 tabIndex={0}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(pos.id); } }}
               >
@@ -225,7 +222,7 @@ export default function IndiaMap({
                   textAnchor="middle"
                   className="text-[7px] font-bold fill-white"
                 >
-                  {aqi}
+                  {aqi ?? '--'}
                 </text>
               </g>
             );
@@ -247,7 +244,7 @@ export default function IndiaMap({
         {positions.map(pos => {
           const city = cities.find(c => c.id === pos.id);
           const aqData = city ? airQualityMap[city.id] : null;
-          const aqi = aqData?.aqi ?? (city?.baseAQI ?? 150);
+          const aqi = aqData?.aqi ?? null;
           const isAnomaly = anomalyMap[pos.id] ?? false;
           const isSelected = pos.id === selectedId;
           const color = cityColors[pos.id];
@@ -269,7 +266,7 @@ export default function IndiaMap({
               <span className={`font-medium ${isSelected ? 'text-brand-700' : 'text-slate-600'}`}>
                 {pos.name}
               </span>
-              <span className="font-mono text-[10px] text-slate-400 ml-auto">{aqi}</span>
+              <span className="font-mono text-[10px] text-slate-600 ml-auto">{aqi ?? '--'}</span>
               {isAnomaly && (
                 <span className="text-[9px] text-red-500 font-semibold">!</span>
               )}

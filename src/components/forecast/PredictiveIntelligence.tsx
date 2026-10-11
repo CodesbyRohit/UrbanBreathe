@@ -1,11 +1,14 @@
 import React from 'react';
 import {
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Area, AreaChart, ReferenceLine,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Line, LineChart, ReferenceLine,
 } from 'recharts';
-import { TrendingUp, AlertTriangle, ArrowUp, ArrowDown, Minus, RefreshCw } from 'lucide-react';
+import { TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useForecast } from '../../hooks/useForecast';
 import { getAQIColor, getAQILabel } from '../../utils/formatters';
+import { formatIndex, formatValue, formatCityTime } from '../../utils/provenance';
+import { POLLUTANT_LABELS } from '../../utils/constants';
 import MetricCard from '../common/MetricCard';
+import DataBasisBadge from '../common/DataBasisBadge';
 
 interface PredictiveIntelligenceProps {
   cityId: string;
@@ -38,6 +41,7 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <p className="text-sm text-slate-500">{error || 'Unable to load forecast data.'}</p>
+          <p className="text-xs text-slate-500 mt-1">No substitute forecast is shown.</p>
           <button onClick={refresh} className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100 transition-colors mx-auto">
             <RefreshCw size={12} /> Retry
           </button>
@@ -46,208 +50,122 @@ export default function PredictiveIntelligence({ cityId }: PredictiveIntelligenc
     );
   }
 
-  const chartData = data.forecast.map(f => ({
-    time: f.hour,
-    aqi: f.aqi,
-    pm25: f.pm25,
-    confidence: f.confidence,
-    hoursFromNow: f.hoursFromNow,
+  const tz = data.season.timeZone;
+  const chartData = data.points.map(p => ({
+    label: `+${p.hoursAhead}h`,
+    naqi: p.naqi,
+    pm25: p.pm25,
+    time: p.time,
+    category: p.category,
+    isLowerBound: p.naqiIsLowerBound,
   }));
-
-  // Find the split point: current (first 24h) vs predicted (beyond 24h)
-  const splitIndex = chartData.findIndex(d => d.hoursFromNow > 24);
-  const currentData = chartData.map(d => ({
-    ...d,
-    // Only show AQI for current portion
-    currentAqi: d.hoursFromNow <= 24 ? d.aqi : null,
-    predictedAqi: d.hoursFromNow > 24 ? d.aqi : null,
-    // Confidence band: ±(100-confidence)% of AQI
-    confidenceBand: d.aqi * ((100 - d.confidence) / 100),
-    bandTop: d.aqi + d.aqi * ((100 - d.confidence) / 100),
-    bandBottom: Math.max(0, d.aqi - d.aqi * ((100 - d.confidence) / 100)),
-  }));
-
-  const trendIcon = data.trend === 'Improving' ? <ArrowDown size={14} /> :
-    data.trend === 'Deteriorating' ? <ArrowUp size={14} className="text-red-600" /> :
-    <Minus size={14} />;
+  const tableRows = data.points.filter(p => p.hoursAhead % 6 === 0);
+  const peak = data.peak;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
           <TrendingUp size={18} className="text-brand-600" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">72-Hour AQI Forecast</h2>
-          <p className="text-sm text-slate-500">Diurnal cycle-based forecasting with confidence scoring</p>
+          <h2 className="text-lg font-semibold text-slate-900">72-Hour Model Forecast</h2>
+          <p className="text-sm text-slate-500">{data.model}, passed through unchanged</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-[10px] text-slate-400">{data.season} season</span>
+          <DataBasisBadge provenance={data.provenance} referenceTime={data.issuedAt} timeZone={tz} />
           <button onClick={refresh} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" aria-label="Refresh forecast">
             <RefreshCw size={14} />
           </button>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MetricCard label="Peak AQI" value={data.peak.aqi} color={getAQIColor(data.peak.aqi)} subtitle={`at ${data.peak.hour}`} />
-        <MetricCard label="Trend" value={data.trend} icon={trendIcon} subtitle="72-hour outlook" />
-        <MetricCard label="Avg Confidence" value={`${data.confidence}%`} subtitle="Model reliability" />
-        <MetricCard label="Season" value={data.season.charAt(0).toUpperCase() + data.season.slice(1)} subtitle="Current season" />
+      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900" role="note">
+        <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+        <div>
+          <p className="font-semibold">{data.evaluationNote}</p>
+          <p className="mt-0.5">{data.naqiNote} {data.naqiLabel}.</p>
+        </div>
       </div>
 
-      {/* Main Forecast Chart */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <MetricCard
+          label="Highest NAQI estimate"
+          value={peak ? formatIndex(peak.naqi, peak.naqiIsLowerBound) : '--'}
+          color={getAQIColor(peak?.naqi ?? null)}
+          subtitle={peak ? `${peak.category} · +${peak.hoursAhead}h` : 'Unavailable'}
+        />
+        <MetricCard
+          label="Peak hour"
+          value={peak ? formatCityTime(peak.time, tz) : '--'}
+          subtitle={peak ? `Dominant: ${peak.dominantPollutants.map(p => POLLUTANT_LABELS[p] || p).join(', ')}` : undefined}
+        />
+        <MetricCard label="Horizon" value={`${data.horizonHours} h`} subtitle={`${data.points.length} hourly points`} />
+        <MetricCard label="Season" value={data.season.label} subtitle="IMD convention" />
+      </div>
+
       <div className="bg-white rounded-xl border border-slate-200 p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-slate-700">AQI Forecast (72 hours)</h3>
-          <div className="flex items-center gap-3 text-[10px] text-slate-400">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-brand-500" /> Observed</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-1.5 border-t-2 border-dashed border-orange-500" /> Predicted</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-300" /> Confidence band</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-400" /> Poor threshold</span>
-          </div>
+          <h3 className="text-sm font-semibold text-slate-700">NAQI-method estimate over the next {data.horizonHours} hours</h3>
+          <span className="text-[10px] text-slate-500">All points are model forecasts</span>
         </div>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={currentData}>
-            <defs>
-              <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b91e8" stopOpacity={0.12} />
-                <stop offset="95%" stopColor="#3b91e8" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="predictedGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f97316" stopOpacity={0.08} />
-                <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="confidenceBand" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3b91e8" stopOpacity={0.12} />
-                <stop offset="100%" stopColor="#3b91e8" stopOpacity={0.04} />
-              </linearGradient>
-            </defs>
+          <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis
-              dataKey="time"
-              tick={{ fontSize: 10, fill: '#475569' }}
-              axisLine={false}
-              tickLine={false}
-              interval={1}
-            />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#475569' }} axisLine={false} tickLine={false} interval={11} />
             <YAxis tick={{ fontSize: 10, fill: '#475569' }} axisLine={false} tickLine={false} domain={[0, 'auto']} width={40} />
             <Tooltip
-              content={({ active, payload, label }) => {
+              content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload;
-                const isPredicted = d.hoursFromNow > 24;
                 return (
                   <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs">
-                    <p className="font-semibold text-slate-900">{label}</p>
-                    <p className="text-slate-600 mt-1">
-                      AQI: <strong>{d.aqi}</strong> ({getAQILabel(d.aqi)})
-                    </p>                      {isPredicted && <p className="text-[#9a3412] text-[10px] font-medium">Forecast</p>}
-                    <p className="text-slate-500">PM2.5: {d.pm25} µg/m³</p>
-                    <p className="text-slate-400">Confidence: {d.confidence}%</p>
+                    <p className="font-semibold text-slate-900">{formatCityTime(d.time, tz)} ({d.label})</p>
+                    <p className="text-slate-600 mt-1">NAQI estimate: <strong>{formatIndex(d.naqi, d.isLowerBound)}</strong> ({getAQILabel(d.naqi)})</p>
+                    <p className="text-slate-500">PM2.5 (hourly): {formatValue(d.pm25)} µg/m³</p>
+                    <p className="text-[10px] text-slate-500 mt-1">Model forecast — not evaluated</p>
                   </div>
                 );
               }}
             />
-            <ReferenceLine y={200} stroke="#9a3412" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Poor', fontSize: 10, fill: '#9a3412', position: 'right' }} />
-            <ReferenceLine y={300} stroke="#7f1d1d" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Very Poor', fontSize: 10, fill: '#7f1d1d', position: 'right' }} />
-
-            {/* Confidence band for predicted portion */}
-            {splitIndex > 0 && (
-              <Area
-                type="monotone"
-                dataKey="bandTop"
-                stroke="none"
-                fill="url(#confidenceBand)"
-                connectNulls={false}
-              />
-            )}
-
-            {/* Observed AQI (solid line) */}
-            <Area
-              type="monotone"
-              dataKey="currentAqi"
-              stroke="#3b91e8"
-              strokeWidth={2.5}
-              fill="url(#forecastGradient)"
-              connectNulls
-            />
-
-            {/* Predicted AQI (dashed line) */}
-            <Area
-              type="monotone"
-              dataKey="predictedAqi"
-              stroke="#f97316"
-              strokeWidth={2}
-              strokeDasharray="6 3"
-              fill="url(#predictedGradient)"
-              connectNulls
-            />
-          </AreaChart>
+            <ReferenceLine y={200} stroke="#9a3412" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Poor (201+)', fontSize: 10, fill: '#9a3412', position: 'right' }} />
+            <ReferenceLine y={300} stroke="#7f1d1d" strokeDasharray="4 4" strokeWidth={1} label={{ value: 'Very Poor (301+)', fontSize: 10, fill: '#7f1d1d', position: 'right' }} />
+            <Line type="monotone" dataKey="naqi" stroke="#c2410c" strokeWidth={2} strokeDasharray="6 3" dot={false} connectNulls={false} />
+          </LineChart>
         </ResponsiveContainer>
-
-        {/* Legend separator label */}
-        <div className="flex items-center gap-2 mt-2 text-[10px] text-slate-400">
-          <span>← Observed (24h)</span>
-          <span className="text-slate-300">|</span>
-          <span>Forecast (48h) →</span>
-        </div>
       </div>
 
-      {/* Forecast Table */}
       <div className="bg-white rounded-xl border border-slate-200">
         <div className="px-5 py-3 border-b border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-700">Hourly Forecast Details</h3>
+          <h3 className="text-sm font-semibold text-slate-700">Forecast details (every 6 hours)</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-slate-500 uppercase border-b border-slate-100">
-                <th className="text-left px-5 py-3 font-medium">Time</th>
-                <th className="text-left px-4 py-3 font-medium">AQI</th>
+                <th className="text-left px-5 py-3 font-medium">Time (IST)</th>
+                <th className="text-left px-4 py-3 font-medium">NAQI est.</th>
                 <th className="text-left px-4 py-3 font-medium">Category</th>
-                <th className="text-left px-4 py-3 font-medium">PM2.5</th>
-                <th className="text-left px-4 py-3 font-medium">Confidence</th>
-                <th className="text-left px-4 py-3 font-medium">Alerts</th>
+                <th className="text-left px-4 py-3 font-medium">PM2.5 (hourly)</th>
+                <th className="text-left px-4 py-3 font-medium">Dominant</th>
               </tr>
             </thead>
             <tbody>
-              {data.forecast.map((f, i) => {
-                const isPredicted = f.hoursFromNow > 24;
+              {tableRows.map(p => {
+                const color = getAQIColor(p.naqi);
                 return (
-                  <tr key={i} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${isPredicted ? 'opacity-85' : ''}`}>
+                  <tr key={p.time} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                     <td className="px-5 py-3 font-medium text-slate-800">
-                      {f.hour}
-                      {isPredicted && <span className="ml-1.5 text-[10px] text-[#c2410c] font-normal">(forecast)</span>}
+                      {formatCityTime(p.time, tz)} <span className="ml-1 text-[10px] text-slate-500 font-normal">+{p.hoursAhead}h</span>
                     </td>
+                    <td className="px-4 py-3"><span className="font-semibold font-mono" style={{ color }}>{formatIndex(p.naqi, p.naqiIsLowerBound)}</span></td>
                     <td className="px-4 py-3">
-                      <span className="font-semibold font-mono" style={{ color: f.color }}>{f.aqi}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded text-[11px] font-medium" style={{ backgroundColor: f.color + '15', color: f.color }}>
-                        {f.category}
+                      <span className="px-2 py-0.5 rounded text-[11px] font-medium" style={{ backgroundColor: color + '15', color }}>
+                        {p.category ?? 'Insufficient data'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-700 font-mono">{f.pm25} µg/m³</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${f.confidence}%`,                        backgroundColor: f.confidence > 70 ? '#15803d' : f.confidence > 50 ? '#a16207' : '#b91c1c' }} />
-                        </div>
-                        <span className="text-xs text-slate-500 font-mono">{f.confidence}%</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {f.alerts?.length > 0 ? (
-                        <div className="flex items-center gap-1 text-red-600 text-[11px]">
-                          <AlertTriangle size={12} />
-                          <span>{f.alerts[0]}</span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-[11px]">—</span>
-                      )}
-                    </td>
+                    <td className="px-4 py-3 text-slate-700 font-mono">{formatValue(p.pm25)} µg/m³</td>
+                    <td className="px-4 py-3 text-slate-600 text-xs">{p.dominantPollutants.map(d => POLLUTANT_LABELS[d] || d).join(', ') || '—'}</td>
                   </tr>
                 );
               })}

@@ -42,13 +42,15 @@
 
 ## Overview
 
-UrbanBreathe transforms live air-quality data into operational decisions for Smart City Command Centres. It combines real-time monitoring, transparent source attribution, forecast projection, policy simulation, executive reporting, and multilingual public advisories into a single decision-support dashboard.
+UrbanBreathe turns air-quality data into decision support for Indian cities. It applies the CPCB National AQI method to modelled CAMS data (via Open-Meteo), shows a 72-hour model forecast, descriptive source context, illustrative intervention scenarios, a situation brief and multilingual citizen guidance — and labels every value with its data basis.
+
+> **Data basis:** air-quality values are CAMS model output (about 45 km grid over India), not station measurements. The index shown is a *NAQI-method estimate from modelled data*, not an official CPCB station AQI. See [docs/methodology/naqi.md](docs/methodology/naqi.md).
 
 **Who it's for:** Smart City Command Centre operators, Municipal Corporation environmental cells, and State Pollution Control Board analysts.
 
 **Why it matters:** 900+ monitoring stations exist across India. Almost none translate to actionable decisions. UrbanBreathe closes that gap by consolidating scattered data into a unified operational picture.
 
-**What's different:** Every module is transparent and auditable — heuristic engines replace opaque ML black boxes, making every score, forecast, and recommendation verifiable by analysts without data science expertise.
+**What's different:** Every module states its data basis and limitations. No machine-learning models are used; the index follows the published CPCB method, and outputs that cannot be supported by the available data (source percentages, health-impact counts, forecast accuracy) are not produced.
 
 Built for the **ET AI Hackathon 2.0 — Grand Finale**.
 
@@ -56,62 +58,43 @@ Built for the **ET AI Hackathon 2.0 — Grand Finale**.
 
 | Capability | Description |
 |---|---|
-| **Live Monitoring** | Real-time AQI, 6 pollutants, weather conditions, trend charts |
-| **Source Attribution** | Heuristic multi-factor pollution source correlation with confidence scoring |
-| **72-Hour AQI Forecast** | Diurnal cycle projection with seasonal adjustment and confidence bands |
-| **Policy Simulator** | Test 8 intervention types with projected impact on AQI, health, and cost |
-| **Executive Briefing** | Auto-generated government-ready situational reports |
-| **Citizen Advisory** | Multilingual health advisories (EN, HI, BN, TE) with emergency alerts |
-| **Comparative Intelligence** | Cross-city AQI ranking and trend comparison |
-| **Enforcement Intelligence** | Deterministic anomaly detection with drill-down analytics |
+| **Current Conditions** | NAQI-method estimate (CPCB method, 24 h / 8 h means) from modelled CAMS data, 6 pollutants in µg/m³, modelled weather, last-24 h PM series |
+| **Source Context** | Descriptive indicators (PM2.5/PM10 ratio, dominant pollutant) — no source apportionment |
+| **72-Hour Model Forecast** | CAMS model forecast with NAQI-method estimates; not evaluated against observations |
+| **Scenario Explorer** | Illustrative arithmetic with uncited placeholder reductions; no health or cost estimates |
+| **Executive Brief** | Situation summary with data basis, CPCB-sourced actions and limitations |
+| **Citizen Advisory** | CPCB health statements and general precautions (EN, HI, BN, TE) |
+| **City Comparison** | Cross-city NAQI estimates and model-forecast peaks |
+| **City Priority List** | Cities ranked by NAQI estimate (screening aid, not an enforcement recommendation) |
 
 ## Features
 
-### 🎬 InitGate + Voice Boot Sequence
+### 🎬 Optional presentation intro
 
-On every page load, users are greeted with a full-screen command centre interface featuring:
-- **Ambient background** — animated digital Earth glow, floating particles, grid overlay, city network connection lines (all CSS/SVG — no canvas, GPU-friendly)
-- **Holographic activation ring** — conic-gradient rotating border with hover glow and press animation
-- Tap anywhere to initialize the speech engine and begin the cinematic boot sequence
+The dashboard opens directly. An optional intro (tap gate, boot animation and browser speech narration) can be started from the header. It is presentation-only and does not connect to any system.
 
-The **BootSequence** then plays a premium terminal-style animation with:
-- 8 system modules appearing sequentially: Satellite Network, AQI Sensors, Weather Models, Forecast Engine, Decision Intelligence, Emergency Network, Smart City Nodes, Citizen Advisory
-- Animated progress bar with gradient fill
-- Per-module status indicators (○ → ▼ → ONLINE/CONNECTED/SYNCED)
-- **Voice narration** — browser-native speech synthesis narrates each module's status
-- Voice mute/unmute toggle (preference persisted via `sessionStorage`)
-- Skip button to bypass the sequence
-- Always plays on every fresh page load (no stale session state)
+### 📊 Current Conditions
 
-### 📊 Live Environmental Monitoring
+- NAQI-method estimate computed with the CPCB method (24-hour means; 8-hour for O₃ and CO; ≥ 3 pollutants including PM2.5 or PM10; ≥ 16 valid hours) from modelled CAMS data; shows "insufficient data" instead of a number when requirements are not met
+- PM2.5, PM10, NO₂, O₃, SO₂, CO hourly values in µg/m³ with per-pollutant CPCB sub-indices
+- Modelled weather: temperature, humidity, wind, pressure, visibility
+- Last-24-hour modelled PM2.5/PM10 chart
+- Data-basis badge on every view; DEMO banner when the server runs in demo mode
 
-- Real-time AQI display with color-coded gauge (Good → Severe)
-- PM2.5, PM10, NO₂, O₃, SO₂, CO readings with severity indicators
-- Weather overlay: temperature, humidity, wind, pressure, visibility
-- Timeline chart with Recharts for AQI trend analysis
-- Deterministic anomaly detection badges with automatic highlighting
-- Manual refresh with loading skeletons and error recovery
-- **Staggered card entrance animations** — cards appear sequentially with 120ms intervals
-- **Card-hover microinteractions** — hover lift, shadow enhancement, border glow, press animation
+### 🔬 Source Context
 
-### 🔬 Source Attribution
+- No source apportionment: that needs speciated measurements and receptor/dispersion modelling, which are not available
+- Descriptive indicators from the 24-hour means (PM2.5/PM10 ratio, dominant pollutant) with caveats
+- Common urban source categories listed for context, without quantities
 
-- Estimates pollution contributions from 5+ source categories (traffic, industry, biomass burning, dust/construction, others)
-- Weighted multi-factor heuristic correlation with confidence scoring and seasonal adjustment
-- Interactive bar + pie chart visualization
-- Mitigation recommendations with actionable steps
+### 🔮 72-Hour Model Forecast
 
-### 🔮 72-Hour AQI Forecast
-
-- Diurnal cycle projection with seasonal trend analysis
-- Confidence scoring per forecast window
-- Detailed hourly forecast table
-- Alert badges for predicted "Poor" or worse conditions
-- Visual confidence bands on forecast chart
+- CAMS model forecast passed through unchanged, with a NAQI-method estimate per hour
+- No accuracy or confidence is claimed: the forecast has not been evaluated against observations or a persistence baseline
 
 ### 🏛️ Policy Intervention Simulator
 
-Test 8 different policy interventions with deterministic impact modeling:
+Explore 8 interventions as illustrative scenarios. Uncited placeholder reduction fractions are applied to the current modelled means and the NAQI method is re-applied — this is not a prediction:
 
 | Intervention | Impact Area |
 |---|---|
@@ -124,25 +107,19 @@ Test 8 different policy interventions with deterministic impact modeling:
 | 🚗 Odd-Even Scheme | Short-term traffic reduction |
 | 🔥 Biomass Burning Ban | Seasonal PM2.5 reduction |
 
-Output metrics: Projected AQI, PM2.5 reduction, hospital admissions averted, population exposure, implementation cost.
+Outputs: current vs scenario NAQI estimate and PM2.5 24-hour mean, with the assumptions used. No health, exposure or cost figures are produced.
 
-### 📝 Executive Decision Brief
+### 📝 Executive Brief
 
-- Auto-generates government-ready situational reports with:
-  - Executive summary with key metrics
-  - Current situation analysis with comparative context
-  - Source attribution breakdown
-  - Forecast outlook with key alerts
-  - Prioritized recommendations (immediate, short-term, long-term)
-  - Expected outcomes with/without intervention comparison
-- Clean print styling (Ctrl+P / `window.print`)
+- Situation summary built from the same data as the dashboard: NAQI-method estimate, dominant pollutant, model-forecast peak (not evaluated), source context, CPCB health statement
+- Recommended actions quote CPCB guidance (CUPS/82/2014-15 §3.4) for Very Poor/Severe; Delhi additionally gets a pointer to the GRAP stage notified by CAQM
+- Lists its limitations; print / save as PDF via the browser
 
 ### 🗣️ Citizen Advisory
 
-- Multilingual support: English, हिन्दी (Hindi), বাংলা (Bengali), తెలుగు (Telugu)
-- Category-specific health precautions (Sensitive Groups, General Public)
-- AQI category guidance with color-coded recommendations
-- Emergency alerts with prominent callouts
+- CPCB health statement for the current category (CUPS/82/2014-15, Table 3.12)
+- General, profile-based precautions in English, हिन्दी (Hindi), বাংলা (Bengali), తెలుగు (Telugu); not medical advice
+- National emergency number 112; local helplines should be taken from state/city administrations
 
 ### 🗺️ Interactive India Map
 
@@ -171,7 +148,8 @@ Output metrics: Projected AQI, PM2.5 reduction, hospital admissions averted, pop
 | **Voice** | Browser-native SpeechSynthesis (Web Speech API) |
 | **Backend** | Node.js, Express 5 |
 | **Data APIs** | Open-Meteo (free, no API key required) |
-| **Correlation Engine** | Heuristic multi-factor pollution source correlation in Node.js |
+| **Index method** | CPCB National AQI (CUPS/82/2014-15) implemented in `server/domain/naqi.js` |
+| **Tests** | Node.js built-in test runner (`npm test`) |
 | **Deployment** | Vercel (frontend + serverless API) |
 | **Fonts** | Inter (UI), JetBrains Mono (data) |
 | **Accessibility** | ARIA labels, keyboard navigation, focus rings, WCAG-compliant contrast |
@@ -220,38 +198,31 @@ The application follows a client-server architecture with lazy-loaded frontend m
 │    ├── advisory     → GET /api/advisory/:cityId                     │
 │    └── health       → GET /api/health                               │
 │                                                                     │
-│  Services:                                                           │
-│    ├── openMeteoService    → Fetch + fallback data pipeline          │
-│    ├── sourceAttribution   → Heuristic correlation engine             │
-│    ├── forecastService     → Diurnal cycle + seasonal model         │
-│    ├── simulationEngine    → Policy intervention impact model       │
-│    └── briefGenerator      → Natural language report synthesis      │
+│  providers/openMeteo   → CAMS + weather adapter (timeout, cache,    │
+│                          schema/unit checks)                        │
+│  domain/naqi, units, season → CPCB NAQI, unit conversion, seasons   │
+│  services/cityAirQuality → provider data + NAQI per city            │
+│  services/forecast, sourceIndicators, scenario, brief, advisory     │
+│  http/validation, errors → request validation, JSON errors          │
 │                                                                     │
-│  Data: cities.js (10 cities), fallbackData.js (curated AQI)         │
-│  Utils: calculations.js (CPCB/EPA AQI formulas)                     │
+│  Data: cities.js (10 cities), demoFixtures.js (DATA_MODE=demo only) │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### User Flow
 
 ```
-[Every Page Load]
+[Page load]
     ↓
-[InitGate]  ← Tap anywhere → initializes speech engine
-    ↓
-[BootSequence]  ← Cinematic 8-module boot animation (~3.7s)
-    ↓  (auto-completes or user skips)
-[Zoom Transition]  ← Smooth 0.8s zoom-in to dashboard
-    ↓
-[Dashboard]
-    ├── LiveMonitoring  (real-time AQI + weather)
-    ├── SourceAttribution  (contribution analysis)
-    ├── PredictiveIntelligence  (72h forecast)
-    ├── PolicySimulator  (intervention testing)
-    ├── EnforcementIntelligence  (anomalies)
-    ├── ComparativeIntelligence  (city comparisons)
-    ├── ExecutiveBrief  (auto-report)
-    └── CitizenAdvisory  (multilingual guidance)
+[Dashboard]  (optional presentation intro available from the header)
+    ├── Current Conditions  (NAQI-method estimate, modelled data)
+    ├── Source Context  (indicators, no apportionment)
+    ├── Model Forecast  (72 h CAMS outlook, not evaluated)
+    ├── Scenario Explorer  (illustrative)
+    ├── City Priority List  (ranked by NAQI estimate)
+    ├── City Comparison
+    ├── Executive Brief
+    └── Citizen Advisory  (CPCB health statements, 4 languages)
 ```
 
 ---
@@ -289,6 +260,17 @@ npm start
 # → Runs both dev server + backend concurrently
 ```
 
+### Tests
+
+```bash
+npm test          # API, NAQI and frontend utility tests (Node's built-in runner)
+npm run typecheck # TypeScript checks
+```
+
+### Demo mode
+
+Set `DATA_MODE=demo` for the API server to serve deterministic, clearly labelled demo fixtures instead of live Open-Meteo data. The UI shows a DEMO banner.
+
 ### Build for Production
 
 ```bash
@@ -300,21 +282,21 @@ npm run build
 
 ## Usage
 
-1. **Open the app** — On every page load, tap the InitGate screen to begin the cinematic boot sequence with voice narration.
+1. **Open the app** — The dashboard opens directly. Use **Intro** in the header for the optional presentation intro.
 
 2. **Select a city** — Choose from 10 major Indian cities via the CitySelector dropdown or the interactive India map.
 
-3. **Monitor live conditions** — The Dashboard shows real-time AQI with a color-coded gauge, 6 pollutant readings, weather conditions, and a timeline chart.
+3. **Check current conditions** — The dashboard shows the NAQI-method estimate from modelled data, 6 pollutant values, modelled weather and the last 24 hours of PM.
 
-4. **Analyze pollution sources** — Visit the Source Attribution module to see estimated contributions from traffic, industry, biomass burning, and more.
+4. **Review source context** — Descriptive indicators and common source categories; contributions are not estimated.
 
-5. **View the forecast** — 72-Hour AQI Forecast shows a diurnal cycle projection with confidence bands and an hourly breakdown table.
+5. **View the forecast** — The 72-hour CAMS model forecast with NAQI-method estimates (not evaluated).
 
-6. **Test policy interventions** — In the Policy Simulator, select one or more interventions and click "Run Simulation" to see projected impacts.
+6. **Explore scenarios** — Select interventions to see illustrative arithmetic based on placeholder assumptions.
 
-7. **Generate a brief** — The Executive Brief module auto-creates a government-ready report you can print as PDF.
+7. **Generate a brief** — A situation summary with data basis and limitations, printable as PDF.
 
-8. **Check advisories** — The Citizen Advisory module provides health guidance in 4 languages.
+8. **Check advisories** — CPCB health statements and general precautions in 4 languages.
 
 ---
 
@@ -324,13 +306,15 @@ npm run build
 |--------|----------|-------------|
 | `GET` | `/api/cities` | List all supported cities |
 | `GET` | `/api/cities/:id` | Get city details |
-| `GET` | `/api/air-quality/:cityId?lat=&lon=` | Live air quality data |
-| `GET` | `/api/sources/:cityId` | Source attribution analysis |
-| `GET` | `/api/forecast/:cityId` | 72-hour AQI forecast |
+| `GET` | `/api/air-quality/:cityId` | NAQI-method estimate, hourly concentrations, modelled weather, provenance |
+| `GET` | `/api/sources/:cityId` | Source context indicators (no apportionment) |
+| `GET` | `/api/forecast/:cityId` | 72-hour CAMS model forecast (not evaluated) |
 | `GET` | `/api/simulation/interventions` | Available policy interventions |
-| `POST` | `/api/simulation/run` | Run policy simulation |
-| `POST` | `/api/brief/generate` | Generate executive decision brief |
-| `GET` | `/api/advisory/:cityId` | Citizen health advisory (supports `?lang=hi/bn/te`) |
+| `POST` | `/api/simulation/run` | Illustrative scenario |
+| `POST` | `/api/brief/generate` | Situation brief |
+| `GET` | `/api/advisory/:cityId` | Citizen advisory (`?lang=en/hi/bn/te`) |
+
+Errors are JSON: `{ "error": { "code", "message" } }` — e.g. 400 invalid input, 404 unknown city, 503 when the data provider is unavailable (no substitute data is served).
 | `GET` | `/api/health` | API health check |
 
 ---
@@ -353,7 +337,7 @@ UrbanBreathe uses a premium government-grade design language optimized for comma
 
 - **Loading**: Skeleton shimmer with theme-aware colors
 - **Empty**: Contextual guidance message
-- **Error**: Clear error message with fallback data
+- **Error**: Clear error message; no substitute data is shown
 - **Cards**: Hover lift (+2px), shadow enhancement, border glow
 
 ### Responsiveness
@@ -367,7 +351,7 @@ UrbanBreathe uses a premium government-grade design language optimized for comma
 - **Transparent algorithms** over black-box outputs — every score and projection is verifiable in source
 - **Modular frontend architecture** — lazy-loaded modules with independent data fetching
 - **Deterministic and auditable calculations** — heuristic engines with visible coefficients
-- **Graceful degradation** — fallback data when APIs are unreachable
+- **Honest degradation** — when the provider is unreachable the app says so; demo fixtures are used only in explicit demo mode and are labelled DEMO
 - **Accessibility-first interface** — keyboard navigation, ARIA labels, WCAG-compliant contrast
 
 ---
@@ -436,9 +420,6 @@ urbanbreathe/
 │   │   ├── useSimulation.ts   # Policy simulation
 │   │   └── useTheme.ts        # Dark/light theme toggle
 │   │
-│   ├── lib/                   # External integrations
-│   │   └── firebase.ts        # Firebase config (optional)
-│   │
 │   └── components/            # UI components
 │       ├── layout/            # Shell, navigation, headers
 │       │   ├── AppShell.tsx   # Main app shell with routing
@@ -484,26 +465,24 @@ urbanbreathe/
 │           └── CitizenAdvisory.tsx
 │
 └── server/                    # Backend source
-    ├── index.js               # Express server entry
-    ├── data/                  # Static datasets
-    │   ├── cities.js          # City coordinates & metadata
-    │   └── fallbackData.js    # Curated AQI fallback data
+    ├── app.js                 # Express app (routes, JSON error handling)
+    ├── index.js               # Local server entry (listens on PORT)
+    ├── config.js              # DATA_MODE and upstream timeouts
+    ├── data/
+    │   ├── cities.js          # City coordinates, time zone & metadata
+    │   └── demoFixtures.js    # Illustrative values for DATA_MODE=demo only
+    ├── domain/
+    │   ├── naqi.js            # CPCB National AQI method
+    │   ├── units.js           # Unit conversions
+    │   └── season.js          # IMD-convention seasons in city time zone
+    ├── http/                  # Request validation and JSON errors
+    ├── providers/
+    │   └── openMeteo.js       # CAMS air quality + weather adapter
     ├── routes/                # API route handlers
-    │   ├── advisory.js
-    │   ├── airQuality.js
-    │   ├── brief.js
-    │   ├── cities.js
-    │   ├── forecast.js
-    │   ├── simulation.js
-    │   └── sources.js
-    ├── services/              # Business logic engines
-    │   ├── briefGenerator.js
-    │   ├── forecastService.js
-    │   ├── openMeteoService.js
-    │   ├── simulationEngine.js
-    │   └── sourceAttribution.js
-    └── utils/
-        └── calculations.js    # CPCB/EPA AQI formulas
+    └── services/              # cityAirQuality, forecast, sourceIndicators,
+                               # scenario, brief, advisory
+tests/                         # node:test suites (server + frontend utilities)
+docs/methodology/naqi.md       # NAQI sources, rules and open questions
 ```
 
 ---
@@ -514,19 +493,19 @@ This section provides an honest account of the technical methods used and their 
 
 ### Source Attribution
 
-**Current method:** Weighted multi-factor heuristic correlation. The engine compares current pollutant concentrations (PM2.5, PM10, NO₂, SO₂, CO, O₃) against predefined source profiles that map pollutants to source categories (traffic, industry, biomass burning, dust, others). Each source gets a confidence score based on how many of its indicator pollutants exceed a threshold. Seasonal multipliers adjust contributions (e.g. biomass burning weighted higher in winter).
+**Current method:** None — source contributions are not estimated. The earlier weighted heuristic produced percentages and confidence scores without a valid basis and was removed. Descriptive indicators are shown instead.
 
 **What a production system would use (v2):** A trained Random Forest model with source-receptor matrices derived from historical monitoring data. This would require a training dataset of historical pollutant concentrations paired with known source activity periods, a feature engineering pipeline, and regular retraining.
 
-**Honest statement:** This is a heuristic rule-based system. There is no trained ML model, no training dataset, and no source-receptor matrix. The heuristic provides reasonable directional estimates but has no learning component.
+**Honest statement:** No source attribution is made. Doing it properly requires speciated measurements and receptor or dispersion modelling.
 
 ### Forecasting
 
-**Current method:** Heuristic diurnal cycle model with seasonal multipliers. The forecast applies a sinusoidal diurnal curve modulated by seasonal amplitude/variance parameters, a linear trend factor, and random noise. No historical data is used — the forecast extrapolates from the single current AQI reading.
+**Current method:** The CAMS global model forecast served by Open-Meteo, passed through unchanged, with the CPCB NAQI method applied to running means. (An earlier heuristic based on a sine curve and random noise was removed.)
 
 **What a production system would use (v2):** A Temporal Convolutional Network trained on multi-year historical AQI and meteorological data.
 
-**Honest statement:** The forecast is not an ML model. It is a deterministic heuristic that assumes daily periodicity. Useful for directional trend indication but not regulatory-grade accuracy.
+**Honest statement:** No accuracy is claimed. Evaluation against station observations and a persistence baseline is planned but not done.
 
 ### Spatial Resolution
 
@@ -538,22 +517,17 @@ This section provides an honest account of the technical methods used and their 
 
 ### What This Prototype Does Implement
 
-While the analysis components are heuristic (as disclosed above), several modules implement real, functioning decision-support logic that is deterministic, transparent, and immediately usable:
-
-- **Anomaly Detection** (`detectAnomaly` in `forecastService.js`): Compares current AQI readings against a city-specific diurnal expectation model. If deviation exceeds 40%, the system flags it with direction (above/below normal), deviation percentage, and expected range — all computed deterministically from baseline AQI, time of day, and seasonal parameters.
-
-- **Enforcement Prioritization** (`EnforcementIntelligence.tsx`): Ranks pollution anomalies by severity, duration, and geographic spread using a deterministic scoring function.
-
-- **Policy Simulation** (`simulationEngine.js`): An 8-intervention impact model computing projected AQI improvement, PM2.5 reduction, hospital admissions averted, population exposure, and implementation cost — all from deterministic mappings. Every coefficient and formula is visible in source code.
-
-**Why heuristics were chosen:** Heuristic models were intentionally selected for this prototype because no publicly available labelled source-attribution dataset exists for Indian cities that would support supervised training within the hackathon timeframe. This constraint is common across Smart City projects — the methodology above documents the approach transparently.
+- **CPCB NAQI calculation** (`server/domain/naqi.js`): breakpoints from CUPS/82/2014-15 Table 3.11, 24-hour / 8-hour running means, the three-pollutant and 16-hour requirements, and an explicit `insufficient_data` result. Sources and open questions: [docs/methodology/naqi.md](docs/methodology/naqi.md).
+- **Provenance labelling**: every response carries its data basis (`modelled` CAMS data or `demo` fixtures); fixtures are never substituted for failed live requests.
+- **Anomaly detection is not implemented** — it needs a historical baseline. The API reports it as unavailable.
+- **Scenarios are illustrative** — uncited placeholder reduction fractions, no health or cost outputs.
 
 ### v2 Roadmap
 
 | Component | v1 Method | v2 Target | Data/Infrastructure Needed |
 |---|---|---|---|
-| Source attribution | Weighted multi-factor heuristic | Random Forest with source-receptor matrices | Historical pollutant + source activity data |
-| Forecasting | Diurnal cycle heuristic | TCN with meteorological covariates | 2-5 years hourly CPCB data |
+| Source attribution | None (descriptive indicators only) | Random Forest with source-receptor matrices | Historical pollutant + source activity data |
+| Forecasting | CAMS model forecast (not evaluated) | TCN with meteorological covariates | 2-5 years hourly CPCB data |
 | Spatial resolution | City-centroid point | 1km×1km gridded | Station network density, satellite data |
 | Dispersion modeling | None | Gaussian plume (AERMOD) | Emissions inventory, met tower data |
 
@@ -562,7 +536,7 @@ While the analysis components are heuristic (as disclosed above), several module
 - **CPCB real-time API integration** — replace Open-Meteo proxy with government live feeds
 - **Satellite aerosol ingestion** — integrate Sentinel-5P / MODIS AOD products for regional coverage
 - **Random Forest source attribution** — train on historical monitoring data when labelled datasets become available
-- **Temporal forecasting models** — replace diurnal heuristic with TCN or LSTM ensemble
+- **Forecast evaluation and improvement** — evaluate the CAMS forecast against station data and a persistence baseline before attempting bias correction or other models
 - **Geospatial heatmaps** — 1km×1km gridded concentration maps with spatial interpolation
 - **Mobile incident reporting** — citizen-facing companion app for photo-submitted pollution reports
 
@@ -600,10 +574,12 @@ While the analysis components are heuristic (as disclosed above), several module
 
 ## Known Limitations
 
-- **Data source**: Uses Open-Meteo as a data proxy. A production deployment would integrate CPCB live feeds directly for higher accuracy.
+- **Data source**: CAMS model output via Open-Meteo (about 45 km grid), not station measurements; the NAQI shown is an estimate, not the official CPCB station AQI. Open-Meteo's free tier is for non-commercial use.
 - **City coverage**: Currently supports 10 major Indian cities. Adding more cities requires new coordinate/baseline data.
-- **Forecast accuracy**: Heuristic diurnal model — not a trained ML model. Should be replaced with ML-based ensemble models for production use.
-- **Source attribution**: Heuristic correlation — not a trained Random Forest model with source-receptor matrices.
+- **Forecast accuracy**: CAMS model forecast, not evaluated against observations or a baseline.
+- **Source attribution**: Not performed; indicators only.
+- **Anomaly detection**: Not implemented (requires a historical baseline).
+- **Demo mode**: `DATA_MODE=demo` serves labelled illustrative fixtures without calling Open-Meteo.
 - **Mobile optimization**: Desktop-optimized for command centre use. Usable on mobile but data-dense views are best on larger screens.
 - **Offline support**: No offline mode — requires active internet connection.
 - **Speech synthesis**: Voice narration uses browser-native SpeechSynthesis. Quality varies by browser and OS. Chrome provides the best experience.

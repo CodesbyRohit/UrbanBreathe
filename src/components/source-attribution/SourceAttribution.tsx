@@ -1,23 +1,30 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import { Brain, Shield, Info, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Search, Info, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useSourceAttribution } from '../../hooks/useSources';
-import { SOURCE_LABELS, SOURCE_COLORS } from '../../utils/constants';
+import { SOURCE_LABELS, SOURCE_COLORS, POLLUTANT_LABELS } from '../../utils/constants';
+import DataBasisBadge from '../common/DataBasisBadge';
+import type { SourceIndicator } from '../../types';
 
 interface SourceAttributionProps {
   cityId: string;
 }
 
+function indicatorValue(ind: SourceIndicator): string {
+  if (ind.value === null) return 'Unavailable';
+  if (Array.isArray(ind.value)) return ind.value.map(p => POLLUTANT_LABELS[p] || p).join(', ');
+  return String(ind.value);
+}
+
 export default function SourceAttribution({ cityId }: SourceAttributionProps) {
-  const { data, loading, refresh } = useSourceAttribution(cityId);
+  const { data, loading, error, refresh } = useSourceAttribution(cityId);
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-4">
         {Array.from({ length: 2 }).map((_, i) => (
           <div key={i} className="bg-white rounded-xl border border-slate-200 p-5">
-            <div className="skeleton w-40 h-4 mb-6" />
-            <div className="skeleton w-full h-64" />
+            <div className="skeleton w-40 h-4 mb-4" />
+            <div className="skeleton w-full h-24" />
           </div>
         ))}
       </div>
@@ -28,7 +35,7 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <p className="text-sm text-slate-500">Unable to analyze pollution sources.</p>
+          <p className="text-sm text-slate-500">{error || 'Unable to load source context.'}</p>
           <button
             onClick={refresh}
             className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-600 bg-brand-50 rounded-lg hover:bg-brand-100 transition-colors mx-auto"
@@ -40,189 +47,66 @@ export default function SourceAttribution({ cityId }: SourceAttributionProps) {
     );
   }
 
-  const chartData = data.sortedSources.map(s => ({
-    name: SOURCE_LABELS[s.source] || s.source,
-    value: s.percentage,
-    fill: SOURCE_COLORS[s.source] || '#94a3b8',
-    confidence: s.confidence,
-    description: s.description,
-    mitigation: s.mitigation,
-  }));
-
-  const avgConfidence = Math.round(data.sortedSources.reduce((s, x) => s + x.confidence, 0) / data.sortedSources.length);
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
-          <Brain size={18} className="text-brand-600" />
+          <Search size={18} className="text-brand-600" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Source Contribution Analysis</h2>
-          <p className="text-sm text-slate-500">Multi-factor analysis of pollution contributors</p>
+          <h2 className="text-lg font-semibold text-slate-900">Source Context</h2>
+          <p className="text-sm text-slate-500">Descriptive indicators — not source apportionment</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <DataBasisBadge provenance={data.provenance} />
           <button onClick={refresh} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" aria-label="Refresh data">
             <RefreshCw size={14} />
           </button>
         </div>
       </div>
 
-      {/* Confidence + Why This Matters banner */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white rounded-xl border border-slate-200 p-3 flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${
-            avgConfidence > 80 ? 'bg-teal-50 text-teal-600' :
-            avgConfidence > 60 ? 'bg-amber-50 text-amber-600' :
-            'bg-red-50 text-red-600'
-          }`}>
-            <Shield size={18} />
+      <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900" role="note">
+        <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+        <p className="leading-relaxed">{data.disclaimer}</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {data.indicators.map(ind => (
+          <div key={ind.id} className="bg-white rounded-xl border border-slate-200 p-5">
+            <h3 className="text-sm font-semibold text-slate-700">{ind.label}</h3>
+            <p className="text-2xl font-bold font-mono text-slate-900 mt-2">{indicatorValue(ind)}</p>
+            {ind.inputs && ind.value !== null && (
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                PM2.5 {ind.inputs.pm25} / PM10 {ind.inputs.pm10} {ind.inputs.unit} (24-h means)
+              </p>
+            )}
+            {ind.unavailableReason && <p className="text-xs text-amber-700 mt-1">{ind.unavailableReason}</p>}
+            <p className="text-xs text-slate-600 mt-3 leading-relaxed">{ind.explanation}</p>
+            <p className="text-[11px] text-slate-500 mt-2 flex items-start gap-1.5">
+              <Info size={12} className="shrink-0 mt-0.5" /> {ind.caveat}
+            </p>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-800">Model Confidence: {avgConfidence}%</span>
-              <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${
-                  avgConfidence > 80 ? 'bg-teal-500' :
-                  avgConfidence > 60 ? 'bg-amber-500' : 'bg-red-500'
-                }`} style={{ width: `${avgConfidence}%` }} />
+        ))}
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 p-5">
+        <h3 className="text-sm font-semibold text-slate-700">Common urban source categories</h3>
+        <p className="text-xs text-slate-500 mt-1 mb-4">Listed for context only. Their contributions in {cityId} are not estimated here.</p>
+        <div className="space-y-3">
+          {data.sourceCategories.map(s => (
+            <div key={s.source} className="border border-slate-100 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: SOURCE_COLORS[s.source] || '#94a3b8' }} />
+                <span className="text-sm font-semibold text-slate-800">{SOURCE_LABELS[s.source] || s.source}</span>
               </div>
+              <p className="text-xs text-slate-600">{s.description}</p>
+              <p className="text-xs text-slate-500 mt-1">Typical measures: {s.mitigation}</p>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {avgConfidence > 80 ? 'High reliability — data cross-validated across multiple sensor networks' :
-               avgConfidence > 60 ? 'Moderate reliability — some data gaps filled by statistical modeling' :
-               'Lower confidence — supplement with local sensor readings where possible'}
-            </p>
-          </div>
-        </div>
-        <div className="bg-brand-50 rounded-xl border border-brand-100 p-3 flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-brand-100 text-brand-600">
-            <Info size={18} />
-          </div>
-          <div>
-            <span className="text-sm font-semibold text-brand-800">Why this matters</span>
-            <p className="text-xs text-brand-700 mt-0.5">
-              Understanding which sources contribute most helps target policy interventions where they have the greatest impact on public health.
-            </p>
-          </div>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Bar Chart */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">Source Contribution (%)</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
-              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: '#475569' }} />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 12, fill: '#475569' }} width={110} />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
-                  return (
-                    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs max-w-[220px]">
-                      <p className="font-semibold text-slate-900">{d.name}</p>
-                      <p className="text-slate-600 mt-1">Contribution: <strong>{d.value}%</strong></p>
-                      <p className="text-slate-500">Confidence: {d.confidence}%</p>
-                      <p className="text-slate-400 mt-1">{d.description}</p>
-                      <p className="text-brand-700 mt-1 text-[10px] font-medium">{d.mitigation}</p>
-                    </div>
-                  );
-                }}
-              />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {chartData.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          {/* Legend */}
-          <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-slate-100">
-            {chartData.map(entry => (
-              <div key={entry.name} className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.fill }} />
-                <span className="text-xs text-slate-600">{entry.name}</span>
-                <span className="text-xs font-mono text-slate-400">{entry.value}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Pie Chart */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5">
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">Distribution</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie data={chartData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value">
-                {chartData.map((entry, i) => (
-                  <Cell key={i} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const d = payload[0].payload;
-                  return (
-                    <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs">
-                      <p className="font-semibold text-slate-900">{d.name}</p>
-                      <p className="text-slate-600">{d.value}% contribution</p>
-                      <p className="text-slate-500">Confidence: {d.confidence}%</p>
-                    </div>
-                  );
-                }}
-              />
-              <Legend
-                verticalAlign="bottom"
-                formatter={(value, _entry, index) => {
-                  const entry = chartData[index];
-                  return <span className="text-xs text-slate-600">{value} — {entry.confidence}% conf.</span>;
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Source Details */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">Source-wise Analysis</h3>
-        <div className="space-y-4">
-          {data.sortedSources.map(s => {
-            const color = SOURCE_COLORS[s.source] || '#94a3b8';
-            return (
-              <div key={s.source} className="border border-slate-100 rounded-lg p-4 hover:bg-slate-50 transition-colors">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                    <span className="text-sm font-semibold text-slate-800">{SOURCE_LABELS[s.source] || s.source}</span>
-                    <span className="text-sm font-bold font-mono" style={{ color }}>{s.percentage}%</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <Shield size={12} />
-                    {s.confidence}% confidence
-                    {s.confidence < 60 && <AlertTriangle size={12} className="text-amber-500" />}
-                  </div>
-                </div>
-                <p className="text-xs text-slate-600 mb-2">{s.description}</p>
-                <div className="flex items-start gap-1.5 text-xs text-brand-700 bg-brand-50 rounded px-2 py-1.5 border border-brand-100">
-                  <Info size={12} className="mt-0.5 shrink-0" />
-                  <span>{s.mitigation}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Methodology */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <h3 className="text-sm font-semibold text-slate-700 mb-2">Methodology</h3>
-        <p className="text-xs text-slate-500 leading-relaxed">{data.methodology}</p>
-        <p className="text-xs text-slate-400 mt-2">Season: {data.season} • Analysis uses multi-factor pollutant correlation with seasonal adjustment</p>
-      </div>
+      <p className="text-xs text-slate-500">Season: {data.season.label} ({data.season.basis})</p>
     </div>
   );
 }

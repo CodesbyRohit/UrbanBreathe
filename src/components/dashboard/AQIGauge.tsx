@@ -2,14 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, Shield, CheckCircle, AlertCircle, Skull, Smile } from 'lucide-react';
 
 interface AQIGaugeProps {
-  aqi: number;
+  aqi: number | null;
+  isLowerBound?: boolean;
   label: string;
   color: string;
   size?: 'sm' | 'md' | 'lg';
-  prevAqi?: number;
+  prevAqi?: number | null;
 }
 
-function getSeverityIcon(aqi: number): React.ReactNode {
+function getSeverityIcon(aqi: number | null): React.ReactNode {
+  if (aqi === null) return <AlertCircle size={14} className="text-slate-500" />;
   if (aqi <= 50) return <Smile size={14} className="text-green-700" />;
   if (aqi <= 100) return <CheckCircle size={14} className="text-lime-700" />;
   if (aqi <= 200) return <AlertCircle size={14} className="text-yellow-700" />;
@@ -18,7 +20,8 @@ function getSeverityIcon(aqi: number): React.ReactNode {
   return <Skull size={14} className="text-purple-700" />;
 }
 
-function getSeverityPattern(aqi: number): string {
+function getSeverityPattern(aqi: number | null): string {
+  if (aqi === null) return '';
   if (aqi <= 50) return '';
   if (aqi <= 100) return '';
   if (aqi <= 200) return 'diagonal-stripes';
@@ -27,10 +30,11 @@ function getSeverityPattern(aqi: number): string {
   return 'cross-hatch';
 }
 
-export default function AQIGauge({ aqi, label, color, size = 'md', prevAqi }: AQIGaugeProps) {
-  // Animation target and start
-  const targetAqi = Math.max(0, Math.round(aqi));
-  const startAqi = prevAqi !== undefined ? Math.max(0, Math.round(prevAqi)) : targetAqi;
+export default function AQIGauge({ aqi, isLowerBound = false, label, color, size = 'md', prevAqi }: AQIGaugeProps) {
+  // Animation target and start (0 ring when no estimate is available)
+  const hasValue = aqi !== null && Number.isFinite(aqi);
+  const targetAqi = hasValue ? Math.max(0, Math.round(aqi as number)) : 0;
+  const startAqi = prevAqi != null ? Math.max(0, Math.round(prevAqi)) : targetAqi;
 
   const [displayValue, setDisplayValue] = useState(startAqi);
   const animationRef = useRef<number | null>(null);
@@ -69,8 +73,9 @@ export default function AQIGauge({ aqi, label, color, size = 'md', prevAqi }: AQ
     ? { svg: 160, stroke: 14, text: 'text-3xl', sub: 'text-xs', badgeSize: 'text-xs' }
     : { svg: 128, stroke: 10, text: 'text-2xl', sub: 'text-[11px]', badgeSize: 'text-[11px]' };
 
-  const pattern = getSeverityPattern(targetAqi);
-  const severityIcon = getSeverityIcon(targetAqi);
+  const pattern = getSeverityPattern(hasValue ? targetAqi : null);
+  const severityIcon = getSeverityIcon(hasValue ? targetAqi : null);
+  const shown = hasValue ? `${displayValue}${isLowerBound ? '+' : ''}` : '--';
 
   return (
     <div className="flex flex-col items-center relative">
@@ -128,12 +133,12 @@ export default function AQIGauge({ aqi, label, color, size = 'md', prevAqi }: AQ
             className={`font-bold font-mono ${dims.text}`}
             style={{ color }}
             aria-live="polite"
-            aria-label={`AQI ${displayValue}`}
+            aria-label={hasValue ? `NAQI estimate ${shown}` : 'No NAQI estimate available'}
           >
-            {displayValue}
+            {shown}
           </span>
           <span className={`${dims.sub} font-semibold text-slate-500 uppercase tracking-wider`}>
-            AQI
+            NAQI est.
           </span>
         </div>
       </div>

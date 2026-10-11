@@ -1,18 +1,14 @@
 import { Router } from 'express';
-import { generateForecast } from '../services/forecastService.js';
-import { getFallbackData } from '../services/openMeteoService.js';
+import { loadCityContext } from '../services/cityAirQuality.js';
+import { buildForecast } from '../services/forecast.js';
+import { cityParam } from '../http/validation.js';
+import { asyncHandler } from '../http/errors.js';
 
 const router = Router();
 
-router.get('/:cityId', (req, res) => {
-  try {
-    const { cityId } = req.params;
-    const data = getFallbackData(cityId);
-    const forecast = generateForecast(data, cityId);
-    res.json(forecast);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.get('/:cityId', cityParam, asyncHandler(async (req, res) => {
+  const ctx = await loadCityContext(req.city);
+  res.json(buildForecast(ctx));
+}));
 
 export default router;

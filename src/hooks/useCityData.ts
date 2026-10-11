@@ -41,7 +41,7 @@ export function useAirQuality(city: City | null) {
 
     setLoading(true);
     setError(null);
-    getAirQuality(city.id, city.lat, city.lon, controller.signal)
+    getAirQuality(city.id, controller.signal)
       .then(result => {
         // Only update state if this is still the latest requested city
         if (latestCityRef.current === city.id) {

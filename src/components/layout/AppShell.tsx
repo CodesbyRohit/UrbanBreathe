@@ -5,10 +5,9 @@ import CitySelector from '../common/CitySelector';
 import IndiaMap from '../common/IndiaMap';
 import BootSequence from './BootSequence';
 import InitGate from './InitGate';
-import CompactLanding from '../landing/CompactLanding';
 import ImpactSection from '../landing/ImpactSection';
 import AmbientBackground from './AmbientBackground';
-import { Menu, Loader } from 'lucide-react';
+import { Menu, Loader, AlertTriangle } from 'lucide-react';
 import type { NavSection } from '../../utils/constants';
 import { useCities, useAirQuality } from '../../hooks/useCityData';
 import { useTheme } from '../../hooks/useTheme';
@@ -41,14 +40,15 @@ export default function AppShell() {
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [showInitGate, setShowInitGate] = useState(true);
+  // The presentation intro (tap gate + boot sequence) is optional and off by
+  // default; it can be started from the header.
+  const [showInitGate, setShowInitGate] = useState(false);
   const [showBoot, setShowBoot] = useState(false);
-  const [showLanding, setShowLanding] = useState(false);
   const lastUpdatedRef = useRef<string | null>(null);
   const { theme, toggleTheme, isDark } = useTheme();
 
   const selectedCity = cities.find(c => c.id === selectedCityId) || null;
-  const { data: airQuality, loading: aqLoading, refresh: refreshAQ } = useAirQuality(selectedCity);
+  const { data: airQuality, loading: aqLoading, error: aqError, refresh: refreshAQ } = useAirQuality(selectedCity);
 
   const [airQualityMap, setAirQualityMap] = useState<Record<string, AirQualityData | null>>({});
 
@@ -68,13 +68,17 @@ export default function AppShell() {
     if (cities.length === 0) return;
     const fetchAll = async () => {
       const results = await Promise.allSettled(
-        cities.map(c => getAirQuality(c.id, c.lat, c.lon).then(d => ({ id: c.id, data: d })))
+        cities.map(c => getAirQuality(c.id).then(d => ({ id: c.id, data: d })))
       );
       const map: Record<string, AirQualityData | null> = {};
       results.forEach(r => {
         if (r.status === 'fulfilled') {
           map[r.value.id] = r.value.data;
         }
+      });
+      // Cities whose request failed are recorded as null (shown as "no estimate").
+      cities.forEach(c => {
+        if (!(c.id in map)) map[c.id] = null;
       });
       setAirQualityMap(prev => ({ ...prev, ...map }));
     };
@@ -93,30 +97,12 @@ export default function AppShell() {
 
   const handleNavigate = useCallback((section: NavSection) => {
     setActiveSection(section);
-    setShowLanding(false);
     setShowBoot(false);
     if (window.innerWidth < 768) setSidebarOpen(false);
   }, []);
 
-  const worstCity = (() => {
-    let worst: { name: string; aqi: number } | null = null;
-    Object.entries(airQualityMap).forEach(([id, data]) => {
-      if (data?.aqi && (!worst || data.aqi > worst.aqi)) {
-        const city = cities.find(c => c.id === id);
-        worst = { name: city?.name || id, aqi: data.aqi };
-      }
-    });
-    return worst;
-  })();
 
-  const activeAnomalies = Object.values(airQualityMap).filter(
-    d => d?.anomaly?.isAnomaly
-  ).length;
-
-  const anomalyMap: Record<string, boolean> = {};
-  Object.entries(airQualityMap).forEach(([id, data]) => {
-    anomalyMap[id] = data?.anomaly?.isAnomaly ?? false;
-  });
+  const isDemo = Object.values(airQualityMap).some(d => d?.provenance.mode === 'demo');
 
   // InitGate → BootSequence → dashboard
   if (showInitGate) {
@@ -133,21 +119,6 @@ export default function AppShell() {
     );
   }
 
-  if (showLanding) {
-    return (
-      <CompactLanding
-        cities={cities}
-        selectedCityId={selectedCityId}
-        airQualityMap={airQualityMap}
-        anomalyMap={anomalyMap}
-        worstCity={worstCity}
-        activeAnomalies={activeAnomalies}
-        onSelectCity={handleCitySelect}
-        onEnterDashboard={() => { setShowLanding(false); }}
-        onNavigate={handleNavigate}
-      />
-    );
-  }
 
   if (initialLoading && !airQuality && cities.length === 0) {
     return <InitialLoadingSkeleton />;
@@ -156,7 +127,7 @@ export default function AppShell() {
   const renderSection = () => {
     const section = (() => {
       switch (activeSection) {
-        case 'dashboard': return <LiveMonitoring key="dashboard" city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
+        case 'dashboard': return <LiveMonitoring key="dashboard" city={selectedCity} airQuality={airQuality} loading={aqLoading} error={aqError} />;
         case 'sources': return <SourceAttribution key="sources" cityId={selectedCityId} />;
         case 'forecast': return <PredictiveIntelligence key="forecast" cityId={selectedCityId} />;
         case 'simulator': return <PolicySimulator key="simulator" cityId={selectedCityId} />;
@@ -164,7 +135,7 @@ export default function AppShell() {
         case 'comparative': return <ComparativeIntelligence key="comparative" cities={cities} airQualityMap={airQualityMap} />;
         case 'brief': return <ExecutiveBrief key="brief" cityId={selectedCityId} />;
         case 'advisory': return <CitizenAdvisory key="advisory" cityId={selectedCityId} />;
-        default: return <LiveMonitoring key="dashboard" city={selectedCity} airQuality={airQuality} loading={aqLoading} />;
+        default: return <LiveMonitoring key="dashboard" city={selectedCity} airQuality={airQuality} loading={aqLoading} error={aqError} />;
       }
     })();
     return <Suspense fallback={<ModuleFallback />}>{section}</Suspense>;
@@ -200,10 +171,17 @@ export default function AppShell() {
             lastUpdated={lastUpdatedRef.current}
             theme={theme}
             onToggleTheme={toggleTheme}
+            onStartIntro={() => setShowInitGate(true)}
           />
         </div>
 
         <main id="main-content" className="flex-1 overflow-auto relative">
+          {isDemo && (
+            <div className="bg-amber-100 border-b border-amber-300 px-4 md:px-6 py-2 text-xs text-amber-900 flex items-center gap-2" role="status">
+              <AlertTriangle size={14} className="shrink-0" />
+              <span><strong>DEMO DATA</strong> — the server is running with DATA_MODE=demo. Values are illustrative fixtures, not measurements or model output.</span>
+            </div>
+          )}
           <div className="px-4 md:px-6 py-4 border-b border-slate-100 bg-white">
             <div className="flex items-center justify-between mb-4">
               <CitySelector cities={cities} selectedId={selectedCityId} onSelect={setSelectedCityId} />
@@ -212,10 +190,9 @@ export default function AppShell() {
               cities={cities}
               selectedId={selectedCityId}
               airQualityMap={airQualityMap}
-              anomalyMap={anomalyMap}
               onSelect={handleCitySelect}
             />
-            <ImpactSection activeAnomalies={activeAnomalies} onNavigate={handleNavigate} />
+            <ImpactSection onNavigate={handleNavigate} />
           </div>
           <div className="px-4 md:px-6 pb-8 animate-fade-in">
             {renderSection()}

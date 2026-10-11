@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { SourceAttribution } from '../types';
+import type { SourceContext } from '../types';
 import { getSources } from '../services/api';
 
 export function useSourceAttribution(cityId: string | null) {
-  const [data, setData] = useState<SourceAttribution | null>(null);
+  const [data, setData] = useState<SourceContext | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);

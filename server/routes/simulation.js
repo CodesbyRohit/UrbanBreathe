@@ -1,6 +1,8 @@
 import { Router } from 'express';
-import { runSimulation, getInterventions } from '../services/simulationEngine.js';
-import { getFallbackData } from '../services/openMeteoService.js';
+import { getInterventions, runScenario, INTERVENTION_IDS } from '../services/scenario.js';
+import { loadCityContext } from '../services/cityAirQuality.js';
+import { resolveCity, validateInterventionIds } from '../http/validation.js';
+import { asyncHandler } from '../http/errors.js';
 
 const router = Router();
 
@@ -8,20 +10,11 @@ router.get('/interventions', (req, res) => {
   res.json(getInterventions());
 });
 
-router.post('/run', (req, res) => {
-  try {
-    const { cityId, interventions } = req.body;
-    if (!cityId || !interventions) {
-      return res.status(400).json({ error: 'cityId and interventions required' });
-    }
-    const data = getFallbackData(cityId);
-    // Derive aqi from PM2.5 if not present in fallback data
-    const cityData = { ...data, aqi: data.aqi || Math.round((data.pm25 || 60) * 1.5), cityId };
-    const result = runSimulation(cityData, interventions);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+router.post('/run', asyncHandler(async (req, res) => {
+  const city = resolveCity(req.body?.cityId);
+  const ids = validateInterventionIds(req.body?.interventions, INTERVENTION_IDS);
+  const ctx = await loadCityContext(city);
+  res.json(runScenario(ctx, ids));
+}));
 
 export default router;
