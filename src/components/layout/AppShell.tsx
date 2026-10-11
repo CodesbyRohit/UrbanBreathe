@@ -40,7 +40,9 @@ export default function AppShell() {
   const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [showInitGate, setShowInitGate] = useState(true);
+  // The presentation intro (tap gate + boot sequence) is optional and off by
+  // default; it can be started from the header.
+  const [showInitGate, setShowInitGate] = useState(false);
   const [showBoot, setShowBoot] = useState(false);
   const lastUpdatedRef = useRef<string | null>(null);
   const { theme, toggleTheme, isDark } = useTheme();
@@ -169,6 +171,7 @@ export default function AppShell() {
             lastUpdated={lastUpdatedRef.current}
             theme={theme}
             onToggleTheme={toggleTheme}
+            onStartIntro={() => setShowInitGate(true)}
           />
         </div>
 

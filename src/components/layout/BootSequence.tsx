@@ -3,15 +3,18 @@ import { Volume2, VolumeX, SkipForward } from 'lucide-react';
 import { getSpeechService } from '../../services/speechService';
 import AmbientBackground from './AmbientBackground';
 
+// Presentation-only animation: it describes what the app uses and does not
+// connect to anything. (Previously it claimed satellite, sensor and "smart city
+// node" connections that do not exist.)
 const SYSTEM_MODULES = [
-  { label: 'Satellite Network', status: 'CONNECTED', delay: 300 },
-  { label: 'AQI Sensors', status: 'ONLINE', delay: 700 },
-  { label: 'Weather Models', status: 'SYNCED', delay: 1100 },
-  { label: 'Forecast Engine', status: 'ACTIVE', delay: 1500 },
-  { label: 'Decision Intelligence', status: 'INITIALIZED', delay: 1900 },
-  { label: 'Emergency Network', status: 'STANDBY', delay: 2300 },
-  { label: 'Smart City Nodes', status: 'LINKED', delay: 2700 },
-  { label: 'Citizen Advisory', status: 'READY', delay: 3100 },
+  { label: 'Air quality: CAMS model via Open-Meteo', status: 'MODELLED', delay: 300 },
+  { label: 'Weather: Open-Meteo model', status: 'MODELLED', delay: 700 },
+  { label: 'Index: CPCB NAQI method', status: 'ESTIMATE', delay: 1100 },
+  { label: 'Forecast: 72-hour model outlook', status: 'NOT EVALUATED', delay: 1500 },
+  { label: 'Source context', status: 'INDICATORS ONLY', delay: 1900 },
+  { label: 'Scenario explorer', status: 'ILLUSTRATIVE', delay: 2300 },
+  { label: 'Situation brief', status: 'LIMITS STATED', delay: 2700 },
+  { label: 'Citizen advisory', status: 'CPCB STATEMENTS', delay: 3100 },
 ];
 
 const BOOT_DURATION = 3700;
@@ -67,7 +70,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
 
           // Queue module status — will play after the welcome finishes
           if (!voiceMutedRef.current) {
-            getSpeechService().speak(`${mod.label} ${mod.status}`);
+            getSpeechService().speak(`${mod.label}. ${mod.status.toLowerCase()}`);
           }
         }, 200);
         timersRef.current.push(completeTimer);
@@ -130,7 +133,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
       }`}
       onClick={handleSkip}
       role="dialog"
-      aria-label="System boot sequence"
+      aria-label="Optional presentation intro"
     >
       {/* Background */}
       <AmbientBackground variant="intro" />
@@ -140,7 +143,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
         {/* Progress bar */}
         <div className="w-full mb-10">
           <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 mb-2">
-            <span>INITIALIZING</span>
+            <span>PRESENTATION INTRO</span>
             <span>{Math.round(progress)}%</span>
           </div>
           <div className="h-px bg-slate-800 relative overflow-hidden">

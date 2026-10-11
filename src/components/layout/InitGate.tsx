@@ -50,7 +50,7 @@ export default function InitGate({ onTap }: InitGateProps) {
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
-      aria-label="INITIALIZE COMMAND CENTRE"
+      aria-label="Start presentation intro"
     >
       <AmbientBackground variant="intro" />
 
@@ -72,7 +72,7 @@ export default function InitGate({ onTap }: InitGateProps) {
         {/* Title */}
         <div className="font-mono text-center">
           <p className="text-sm text-brand-400 tracking-[0.15em]">
-            [ INITIALIZE COMMAND CENTRE ]
+            [ START PRESENTATION INTRO ]
           </p>
           <p className="text-[10px] text-slate-500 mt-4 tracking-wider animate-fade-in">
             TAP ANYWHERE TO BEGIN
@@ -82,7 +82,7 @@ export default function InitGate({ onTap }: InitGateProps) {
         {/* Bottom status */}
         <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 text-[10px] text-slate-700 font-mono tracking-wider animate-fade-in">
           <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-          SYSTEM STANDBY
+          OPTIONAL INTRO
         </div>
       </div>
     </div>
