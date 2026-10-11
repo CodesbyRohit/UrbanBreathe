@@ -1,32 +1,19 @@
 import { Router } from 'express';
-import { generateExecutiveBrief } from '../services/briefGenerator.js';
-import { getFallbackData } from '../services/openMeteoService.js';
-import { calculateSourceAttribution } from '../services/sourceAttribution.js';
-import { generateForecast } from '../services/forecastService.js';
-import { runSimulation, getInterventions } from '../services/simulationEngine.js';
+import { loadCityContext } from '../services/cityAirQuality.js';
+import { generateBrief } from '../services/brief.js';
+import { INTERVENTION_IDS } from '../services/scenario.js';
 import { resolveCity, validateInterventionIds } from '../http/validation.js';
+import { asyncHandler } from '../http/errors.js';
 
 const router = Router();
 
-router.post('/generate', (req, res, next) => {
-  try {
-    const { cityId } = resolveCity(req.body?.cityId);
-    const interventions = req.body?.interventions === undefined
-      ? []
-      : validateInterventionIds(req.body.interventions, getInterventions().map(iv => iv.id), { min: 0 });
-
-    const data = getFallbackData(cityId);
-    const sources = calculateSourceAttribution(data);
-    const forecast = generateForecast(data, cityId);
-    let simulation = null;
-    if (interventions && interventions.length > 0) {
-      simulation = runSimulation(data, interventions);
-    }
-    const brief = generateExecutiveBrief(cityId, data, sources, forecast, simulation);
-    res.json(brief);
-  } catch (err) {
-    next(err);
-  }
-});
+router.post('/generate', asyncHandler(async (req, res) => {
+  const city = resolveCity(req.body?.cityId);
+  const interventions = req.body?.interventions === undefined
+    ? []
+    : validateInterventionIds(req.body.interventions, INTERVENTION_IDS, { min: 0 });
+  const ctx = await loadCityContext(city);
+  res.json(generateBrief(ctx, interventions));
+}));
 
 export default router;
