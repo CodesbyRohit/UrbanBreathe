@@ -168,14 +168,15 @@ export function computeNaqi(series, referenceTime) {
       windowEnd: avg.windowEnd,
     };
     if (avg.validHours < required) {
-      subIndices[parameter] = { ...base, status: 'insufficient_data', average: null, subIndex: null, isLowerBound: false, category: null };
+      subIndices[parameter] = { ...base, status: 'insufficient_data', average: null, averageRaw: null, subIndex: null, isLowerBound: false, category: null };
       continue;
     }
     const si = subIndexFor(parameter, avg.average);
     subIndices[parameter] = {
       ...base,
       status: 'ok',
-      average: roundTo(avg.average, bp.decimals + 1),
+      average: roundTo(avg.average, bp.decimals + 1), // for display
+      averageRaw: avg.average, // full precision, for further calculation
       subIndex: si.subIndex,
       isLowerBound: si.isLowerBound,
       category: si.category,
