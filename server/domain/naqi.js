@@ -3,7 +3,8 @@
 // Sources (see docs/methodology/naqi.md for full references and open questions):
 //  - CPCB, "National Air Quality Index", Control of Urban Pollution Series
 //    CUPS/82/2014-15 — Table 3.11 (breakpoints), Table 3.12 (health statements),
-//    sub-index formula and maximum-operator aggregation.
+//    sub-index formula of §3.5 (including "subtract one from ILO, if ILO is
+//    greater than 50") and maximum-operator aggregation.
 //  - CPCB, "How is AQI calculated?" (airquality.cpcb.gov.in/ccr_docs/How_AQI_Calculated.pdf):
 //    24-hour averages (8-hour for CO and O3); overall AQI only when at least three
 //    pollutants are available and one of them is PM2.5 or PM10; at least 16 hours of
@@ -94,7 +95,9 @@ export function subIndexFor(parameter, concentration) {
   const bandIndex = bp.bands.findIndex(([lo, hi]) => c >= lo && c <= hi);
   if (bandIndex === -1) return null; // unreachable for rounded, non-negative input
   const [bLo, bHi] = bp.bands[bandIndex];
-  const { min: iLo, max: iHi } = NAQI_CATEGORIES[bandIndex];
+  const { min: bandMin, max: iHi } = NAQI_CATEGORIES[bandIndex];
+  // CUPS/82/2014-15 §3.5: "subtract one from ILO, if ILO is greater than 50".
+  const iLo = bandMin > 50 ? bandMin - 1 : bandMin;
   const subIndex = Math.round(((iHi - iLo) / (bHi - bLo)) * (c - bLo) + iLo);
   return { subIndex, isLowerBound: false, category: NAQI_CATEGORIES[bandIndex].label };
 }

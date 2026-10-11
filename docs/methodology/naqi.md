@@ -26,7 +26,7 @@ and what remains uncertain.
 | Rule | Implementation | Status |
 |---|---|---|
 | Breakpoints | Table 3.11 for PM10, PM2.5, NO2, O3, CO (mg/m³), SO2, NH3, Pb | Verified |
-| Sub-index | `Ip = (IHI − ILO)/(BHI − BLO) × (Cp − BLO) + ILO`, rounded to an integer | Verified formula; integer rounding is our choice |
+| Sub-index | `Ip = (IHI − ILO)/(BHI − BLO) × (Cp − BLO) + ILO`, with ILO reduced by one when it is greater than 50 (§3.5), rounded to an integer | Verified formula; integer rounding is our choice |
 | Aggregation | Maximum sub-index; the pollutant(s) at the maximum are "dominant" | Verified |
 | Minimum pollutants | ≥ 3 valid sub-indices, at least one of PM2.5/PM10, else `insufficient_data` (no value) | Verified |
 | 24-hour completeness | ≥ 16 valid hourly values in the window | Verified |
@@ -50,7 +50,11 @@ and what remains uncertain.
    (one decimal for CO and Pb), leaving gaps such as 30–31 µg/m³ for PM2.5. We
    round the averaged concentration to the table's precision before band
    lookup. CPCB's own rounding rule was not found.
-5. **Gas unit conversion.** ppb/ppm conversions use 25 °C and 1 atm
+5. **"Subtract one from ILO".** Section 3.5 of the report states the formula
+   with "subtract one from ILO, if ILO is greater than 50", so e.g. PM2.5 of
+   31 µg/m³ maps to 50 and 45 µg/m³ to 74. Some secondary sources omit this
+   step (giving 51 and 75). We follow the CPCB report.
+6. **Gas unit conversion.** ppb/ppm conversions use 25 °C and 1 atm
    (24.45 L/mol). The reference conditions CPCB assumes were not confirmed. No
    current data provider requires this conversion (Open-Meteo reports µg/m³).
 

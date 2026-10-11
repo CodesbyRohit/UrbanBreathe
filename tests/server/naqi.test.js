@@ -20,8 +20,10 @@ describe('sub-index (CPCB CUPS/82/2014-15 Table 3.11)', () => {
   test('PM2.5 band edges and interpolation', () => {
     assert.equal(subIndexFor('pm25', 0).subIndex, 0);
     assert.equal(subIndexFor('pm25', 30).subIndex, 50);
-    assert.equal(subIndexFor('pm25', 31).subIndex, 51);
-    assert.equal(subIndexFor('pm25', 45).subIndex, 75); // (49/29)*14 + 51 = 74.66
+    // §3.5: ILO is reduced by one above the Good band, so 31 maps to 50, not 51.
+    assert.equal(subIndexFor('pm25', 31).subIndex, 50);
+    assert.equal(subIndexFor('pm25', 45).subIndex, 74); // (50/29)*14 + 50 = 74.14
+    assert.equal(subIndexFor('pm25', 61).subIndex, 100);
     assert.equal(subIndexFor('pm25', 60).subIndex, 100);
     assert.equal(subIndexFor('pm25', 90).subIndex, 200);
     assert.equal(subIndexFor('pm25', 120).subIndex, 300);
@@ -31,7 +33,7 @@ describe('sub-index (CPCB CUPS/82/2014-15 Table 3.11)', () => {
   test('values between published integer bands are rounded, not dropped to 0', () => {
     // Regression: the old calculator returned 0 for 30 < x < 31.
     assert.equal(subIndexFor('pm25', 30.4).subIndex, 50);
-    assert.equal(subIndexFor('pm25', 30.6).subIndex, 51);
+    assert.equal(subIndexFor('pm25', 30.6).subIndex, 50); // rounds to 31 -> 50
   });
 
   test('PM10 and NO2 edges', () => {
@@ -44,7 +46,7 @@ describe('sub-index (CPCB CUPS/82/2014-15 Table 3.11)', () => {
 
   test('CO is evaluated in mg/m³ with one-decimal breakpoints', () => {
     assert.equal(subIndexFor('co', 1.0).subIndex, 50);
-    assert.equal(subIndexFor('co', 1.1).subIndex, 51);
+    assert.equal(subIndexFor('co', 1.1).subIndex, 50);
     assert.equal(subIndexFor('co', 10).subIndex, 200);
     assert.equal(subIndexFor('co', 34).subIndex, 400);
   });
@@ -122,7 +124,7 @@ describe('overall NAQI requirements', () => {
     assert.equal(r.value, 100);
     assert.deepEqual(r.dominantPollutants, ['o3']);
     assert.equal(r.category, 'Satisfactory');
-    assert.equal(r.subIndices.pm25.subIndex, 75);
+    assert.equal(r.subIndices.pm25.subIndex, 74);
   });
 
   test('fewer than three pollutants -> insufficient_data, no value', () => {
@@ -195,18 +197,19 @@ describe('regression: live Delhi CAMS values (11 Oct 2026, D1)', () => {
       so2: { unit: 'ug/m3', points: flat(32.9, 24) },
       co: { unit: 'ug/m3', points: flat(547, 8) },
     }, REF);
-    // Hand-computed from Table 3.11 (concentrations rounded to table precision):
-    //   PM10 152 -> (99/149)*(152-101)+101 = 134.9 -> 135
-    //   PM2.5 63 -> (99/29)*(63-61)+101   = 107.8 -> 108
-    //   O3 101 -> 101; NO2 29 -> 36; SO2 33 -> 41; CO 0.5 mg/m³ -> 25
+    // Hand-computed from Table 3.11 and the §3.5 formula (ILO - 1 above Good),
+    // concentrations rounded to table precision:
+    //   PM10 152 -> (100/149)*(152-101)+100 = 134.2 -> 134
+    //   PM2.5 63 -> (100/29)*(63-61)+100   = 106.9 -> 107
+    //   O3 101 -> 100; NO2 29 -> 36.25 -> 36; SO2 33 -> 41.25 -> 41; CO 0.5 mg/m³ -> 25
     assert.equal(r.status, 'ok');
-    assert.equal(r.subIndices.pm10.subIndex, 135);
-    assert.equal(r.subIndices.pm25.subIndex, 108);
-    assert.equal(r.subIndices.o3.subIndex, 101);
+    assert.equal(r.subIndices.pm10.subIndex, 134);
+    assert.equal(r.subIndices.pm25.subIndex, 107);
+    assert.equal(r.subIndices.o3.subIndex, 100);
     assert.equal(r.subIndices.no2.subIndex, 36);
     assert.equal(r.subIndices.so2.subIndex, 41);
     assert.equal(r.subIndices.co.subIndex, 25);
-    assert.equal(r.value, 135);
+    assert.equal(r.value, 134);
     assert.deepEqual(r.dominantPollutants, ['pm10']);
     assert.equal(r.category, 'Moderate');
     assert.notEqual(r.value, 360);

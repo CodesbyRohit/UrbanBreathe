@@ -25,7 +25,7 @@ describe('live CAMS data (D1, D2, D3 regressions)', () => {
     const res = await getDelhi();
     assert.equal(res.status, 200);
     const body = await res.json();
-    assert.equal(body.aqi, 135); // hand-computed in naqi.test.js; PM10 dominant
+    assert.equal(body.aqi, 134); // hand-computed in naqi.test.js; PM10 dominant
     assert.equal(body.aqiStatus, 'ok');
     assert.equal(body.aqiCategory, 'Moderate');
     assert.deepEqual(body.naqi.dominantPollutants, ['pm10']);
@@ -173,7 +173,7 @@ describe('upstream failures never fall back to fixtures', () => {
     const res = await getDelhi();
     assert.equal(res.status, 200);
     const body = await res.json();
-    assert.equal(body.aqi, 135);
+    assert.equal(body.aqi, 134);
     assert.equal(body.temperature, null);
     assert.equal(body.provenance.weather.status, 'unavailable');
   });
