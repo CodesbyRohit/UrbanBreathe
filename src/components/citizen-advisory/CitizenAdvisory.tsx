@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Users, AlertTriangle, Shield, Globe, Phone, RefreshCw, Languages, User, Baby, Wind, HardHat, Heart } from 'lucide-react';
+import { Users, Shield, Globe, Phone, RefreshCw, Languages, User, Baby, Wind, HardHat, Heart, Info } from 'lucide-react';
 import { getAdvisory } from '../../services/api';
 import type { CitizenAdvisory as AdvisoryData } from '../../types';
+import DataBasisBadge from '../common/DataBasisBadge';
+import { formatIndex } from '../../utils/provenance';
 
 interface CitizenAdvisoryProps {
   cityId: string;
@@ -37,104 +39,106 @@ const PROFILES: ProfileConfig[] = [
 ];
 
 /**
- * Rule-based guidance lookup: profile + AQI category → specific precautions.
- * All rules are transparent if/else logic, not a black-box model.
+ * Rule-based guidance lookup: profile + CPCB category → general precautions.
+ * Transparent lookup table, not AI-generated content and not medical advice.
+ * Categories are grouped as: Good/Satisfactory, Moderate, Poor, Very Poor/Severe.
  */
-function getProfileGuidance(profile: ProfileKey, aqi: number): { summary: string; precautions: string[] } {
-  const isHazardous = aqi > 300;
-  const isVeryPoor = aqi > 200 && aqi <= 300;
-  const isModerate = aqi > 100 && aqi <= 200;
-  const isGood = aqi <= 100;
+function getProfileGuidance(profile: ProfileKey, category: string | null): { summary: string; precautions: string[] } | null {
+  if (!category) return null;
+  const level = category === 'Very Poor' || category === 'Severe' ? 'high'
+    : category === 'Poor' ? 'poor'
+    : category === 'Moderate' ? 'moderate'
+    : 'low';
 
   switch (profile) {
     case 'general':
-      if (isHazardous) return {
+      if (level === 'high') return {
         summary: 'Limit outdoor activity. Keep windows closed. Use air purifiers if available.',
-        precautions: ['Avoid prolonged outdoor exposure', 'Keep windows and doors sealed', 'Use N95 or better mask if going out', 'Run air purifiers on recirculate mode'],
+        precautions: ['Avoid prolonged outdoor exposure', 'Keep windows and doors closed', 'Use a well-fitted N95 mask if going out', 'Use air purifiers if available'],
       };
-      if (isVeryPoor) return {
-        summary: 'Reduce prolonged outdoor exertion. Sensitive individuals may experience symptoms.',
-        precautions: ['Minimize outdoor activity during peak hours (6-10 AM)', 'Wear a mask outdoors', 'Keep windows closed in traffic-heavy hours', 'Monitor for coughing or throat irritation'],
+      if (level === 'poor') return {
+        summary: 'Reduce prolonged outdoor exertion. People with heart or lung conditions may feel discomfort.',
+        precautions: ['Reduce time spent outdoors when levels are high', 'Wear a mask outdoors', 'Keep windows closed near busy roads', 'Watch for coughing or throat irritation'],
       };
-      if (isModerate) return {
-        summary: 'Air quality is acceptable for most. Some sensitive individuals may experience mild effects.',
-        precautions: ['Ventilate home during cooler hours (late evening)', 'Reduce outdoor exercise if sensitive', 'Keep medications accessible if prone to allergies'],
+      if (level === 'moderate') return {
+        summary: 'Acceptable for most people. Sensitive individuals may experience mild effects.',
+        precautions: ['Reduce prolonged outdoor exertion if you are sensitive', 'Keep medicines accessible if you have asthma or allergies'],
       };
       return {
-        summary: 'Air quality poses little to no risk. Enjoy normal activities.',
-        precautions: ['Enjoy normal outdoor activities', 'Ventilate indoor spaces', 'Practice general wellness habits'],
+        summary: 'Air quality poses little risk. Normal activities are fine.',
+        precautions: ['Normal outdoor activities are fine', 'Ventilate indoor spaces'],
       };
 
     case 'child_elderly':
-      if (isHazardous) return {
-        summary: 'CRITICAL: Keep children and elderly indoors. This is a health emergency for vulnerable age groups.',
-        precautions: ['Do not allow outdoor play or walks', 'Keep indoor air clean — use purifiers or wet cloths on windows', 'Monitor for respiratory distress (wheezing, coughing)', 'Have emergency contacts ready', 'Ensure adequate hydration'],
+      if (level === 'high') return {
+        summary: 'High risk for children and older adults. Keep outdoor exposure to a minimum.',
+        precautions: ['Avoid outdoor play and walks', 'Use air purifiers indoors if available', 'Watch for breathing difficulty, wheezing or coughing', 'Keep emergency contacts ready'],
       };
-      if (isVeryPoor) return {
-        summary: 'High risk for children and elderly. Limit outdoor exposure to essential only.',
-        precautions: ['Keep children indoors — no outdoor play', 'Elderly should avoid morning walks', 'Use masks if outdoor trips are necessary', 'Keep prescribed inhalers/medications accessible', 'Monitor breathing difficulty'],
+      if (level === 'poor') return {
+        summary: 'Elevated risk for children and older adults. Limit outdoor exposure.',
+        precautions: ['Limit outdoor play', 'Older adults should avoid strenuous outdoor activity', 'Use masks if outdoor trips are necessary', 'Keep prescribed medicines accessible'],
       };
-      if (isModerate) return {
-        summary: 'Moderate risk. Supervise outdoor time for children. Elderly should stay indoors during peak pollution hours.',
-        precautions: ['Limit outdoor play for children to 30 minutes', 'Elderly: avoid outdoor activity 6-10 AM', 'Keep windows closed near traffic-heavy roads', 'Run humidifiers to ease breathing'],
+      if (level === 'moderate') return {
+        summary: 'Some risk for children and older adults with heart or lung conditions.',
+        precautions: ['Supervise and shorten outdoor play if symptoms appear', 'Older adults: avoid strenuous outdoor activity when levels are highest', 'Keep windows closed near busy roads'],
       };
       return {
-        summary: 'Low risk. Normal activities can resume. Maintain usual precautions.',
-        precautions: ['Outdoor play and walks are safe', 'Keep regular meal and hydration schedules', 'Maintain routine health checks'],
+        summary: 'Low risk. Normal activities can continue.',
+        precautions: ['Outdoor play and walks are fine', 'Maintain routine health checks'],
       };
 
     case 'respiratory':
-      if (isHazardous) return {
-        summary: 'EMERGENCY: Stay indoors. This is a severe health risk for anyone with respiratory conditions.',
-        precautions: ['Do not go outdoors unless absolutely necessary', 'Use rescue inhaler or nebulizer as prescribed', 'Keep windows and doors sealed', 'Run HEPA air purifier continuously', 'Call doctor if symptoms worsen', 'Wear N95 mask even indoors if ventilation is poor'],
+      if (level === 'high') return {
+        summary: 'Serious risk for people with respiratory conditions. Stay indoors as far as possible.',
+        precautions: ['Go outdoors only if necessary', 'Use rescue medication as prescribed', 'Keep windows and doors closed', 'Use a HEPA air purifier if available', 'Contact your doctor if symptoms worsen'],
       };
-      if (isVeryPoor) return {
-        summary: 'High risk. Limit outdoor exposure. Keep rescue medication accessible at all times.',
-        precautions: ['Stay indoors as much as possible', 'Use prescribed preventer medication regularly', 'Carry rescue inhaler at all times', 'Avoid physical exertion', 'Monitor peak flow if asthmatic', 'Use air purifier in bedroom'],
+      if (level === 'poor') return {
+        summary: 'High risk. Limit outdoor exposure and keep rescue medication with you.',
+        precautions: ['Stay indoors as much as possible', 'Take preventer medication as prescribed', 'Carry rescue medication', 'Avoid physical exertion', 'Use an air purifier if available'],
       };
-      if (isModerate) return {
-        summary: 'Moderate risk. Outdoor activity may trigger symptoms. Take precautions.',
-        precautions: ['Take preventer medication before going out', 'Carry rescue inhaler', 'Avoid outdoor exercise', 'Keep windows closed at night if AQI is elevated', 'Monitor symptoms and rest if needed'],
+      if (level === 'moderate') return {
+        summary: 'Moderate risk. Outdoor activity may trigger symptoms.',
+        precautions: ['Carry rescue medication', 'Avoid strenuous outdoor exercise', 'Monitor symptoms and rest if needed'],
       };
       return {
-        summary: 'Low risk. Continue regular medication routine.',
-        precautions: ['Continue prescribed medication routine', 'Normal daily activities are safe', 'Keep inhaler accessible as routine', 'Monitor air quality updates daily'],
+        summary: 'Low risk. Continue your usual medication routine.',
+        precautions: ['Continue prescribed medication', 'Keep your inhaler accessible as usual'],
       };
 
     case 'outdoor_worker':
-      if (isHazardous) return {
-        summary: 'CRITICAL: Stop outdoor work if possible. If essential, use full PPE including N95 mask and eye protection.',
-        precautions: ['Stop non-essential outdoor work', 'If work must continue: full PPE (N95 mask, safety goggles)', 'Take breaks every 30 minutes in clean-air zones', 'Drink plenty of water to help clear airways', 'Monitor coworkers for signs of distress', 'Report any breathing difficulty immediately'],
+      if (level === 'high') return {
+        summary: 'High risk for outdoor workers. Reduce outdoor work where possible and use protection.',
+        precautions: ['Postpone non-essential outdoor work', 'Wear a well-fitted N95 mask', 'Take regular breaks in indoor or cleaner-air areas', 'Report breathing difficulty immediately'],
       };
-      if (isVeryPoor) return {
-        summary: 'High risk for outdoor workers. Use N95 masks and take frequent breaks.',
-        precautions: ['Wear N95 mask at all times outdoors', 'Take 10-minute break every hour in indoor/clean area', 'Increase water intake', 'Rotate workers to limit individual exposure', 'Watch for coughing, wheezing, eye irritation'],
+      if (level === 'poor') return {
+        summary: 'Elevated risk for outdoor workers. Use masks and take breaks.',
+        precautions: ['Wear a well-fitted N95 mask outdoors', 'Take regular breaks indoors', 'Rotate tasks to limit individual exposure', 'Watch for coughing, wheezing or eye irritation'],
       };
-      if (isModerate) return {
-        summary: 'Moderate risk. Use protective equipment and limit continuous outdoor exposure.',
-        precautions: ['Wear mask during outdoor work', 'Take periodic breaks in shaded/ventilated areas', 'Stay hydrated', 'Reduce heavy physical exertion during peak hours'],
+      if (level === 'moderate') return {
+        summary: 'Moderate risk. Limit continuous heavy exertion outdoors.',
+        precautions: ['Wear a mask during dusty or heavy work', 'Take periodic breaks', 'Reduce heavy exertion when levels are highest'],
       };
       return {
-        summary: 'Low risk. Standard outdoor work precautions recommended.',
-        precautions: ['Standard outdoor work is safe', 'Stay hydrated during physical work', 'Use sunscreen and protective gear as usual'],
+        summary: 'Low risk. Standard outdoor work precautions apply.',
+        precautions: ['Standard outdoor work is fine', 'Stay hydrated during physical work'],
       };
 
     case 'fitness':
-      if (isHazardous) return {
-        summary: 'CRITICAL: Do not exercise outdoors. Move workouts indoors immediately. Air quality is dangerous for physical activity.',
-        precautions: ['Move all workouts indoors — gym, home, or indoor track', 'Avoid running, cycling, or outdoor sports', 'Use indoor cardio equipment if available', 'Reduce workout intensity if indoors (air quality affects indoor too)', 'Monitor breathing and heart rate closely'],
+      if (level === 'high') return {
+        summary: 'Do not exercise outdoors. Move workouts indoors.',
+        precautions: ['Move workouts indoors', 'Avoid outdoor running, cycling and sports', 'Reduce intensity (indoor air is also affected)', 'Stop if you feel breathing discomfort'],
       };
-      if (isVeryPoor) return {
-        summary: 'High risk for outdoor exercise. Shift to indoor workouts. If you must go out, reduce intensity by 50%.',
-        precautions: ['Choose indoor gym or home workout instead of outdoor run', 'If running outdoors: limit to 20 minutes, reduce pace', 'Run in parks away from traffic', 'Morning (before 6 AM) or late evening (after 9 PM) are marginally better', 'Wear mask during warm-up and cool-down'],
+      if (level === 'poor') return {
+        summary: 'High risk for outdoor exercise. Prefer indoor workouts.',
+        precautions: ['Prefer indoor workouts', 'If exercising outdoors, keep it short and light', 'Choose routes away from traffic'],
       };
-      if (isModerate) return {
-        summary: 'Moderate risk. Outdoor exercise is possible with reduced intensity. Choose low-traffic routes and time.',
-        precautions: ['Outdoor exercise OK but reduce duration by 30%', 'Choose parks or trails away from traffic', 'Avoid roadside running or cycling', 'Morning hours (5-7 AM) are best', 'Monitor breathing — slow down if you feel discomfort'],
+      if (level === 'moderate') return {
+        summary: 'Outdoor exercise is possible at reduced intensity.',
+        precautions: ['Reduce duration and intensity', 'Choose parks or routes away from traffic', 'Slow down if you feel discomfort'],
       };
       return {
-        summary: 'Low risk. Normal exercise routine recommended. Enjoy outdoor activities.',
-        precautions: ['Normal outdoor exercise is safe', 'Standard warm-up and hydration', 'Enjoy outdoor sports and activities', 'Maintain regular fitness routine'],
+        summary: 'Low risk. Normal exercise routine is fine.',
+        precautions: ['Normal outdoor exercise is fine', 'Standard warm-up and hydration'],
       };
   }
 }
@@ -187,6 +191,9 @@ export default function CitizenAdvisory({ cityId }: CitizenAdvisoryProps) {
     return advisory.multilingual[language] || advisory.healthAdvisory;
   };
 
+  const guidance = getProfileGuidance(activeProfile, advisory.category);
+  const aqiText = formatIndex(advisory.aqi, advisory.aqiIsLowerBound);
+
   const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
 
   return (
@@ -198,7 +205,7 @@ export default function CitizenAdvisory({ cityId }: CitizenAdvisoryProps) {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Citizen Health Advisory</h2>
-            <p className="text-sm text-slate-500">Public guidance and emergency information</p>
+            <p className="text-sm text-slate-500">General guidance based on a NAQI estimate from modelled data</p>
           </div>
         </div>
 
@@ -261,15 +268,15 @@ export default function CitizenAdvisory({ cityId }: CitizenAdvisoryProps) {
             <span className="text-xs font-semibold uppercase tracking-wider font-mono" style={{ color: advisory.color }}>
               {activeProfile === 'general' ? 'General Guidance' : `${PROFILES.find(p => p.id === activeProfile)?.label || 'Personalized'} Guidance`}
             </span>
-            <span className="text-[9px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded ml-auto">AQI {advisory.aqi}</span>
+            <span className="text-[9px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded ml-auto">NAQI est. {aqiText}</span>
           </div>
           <p className="text-sm text-slate-700 mt-2 leading-relaxed font-medium">
-            {getProfileGuidance(activeProfile, advisory.aqi).summary}
+            {guidance ? guidance.summary : 'Not enough valid data for guidance right now. Please check the official CPCB station AQI.'}
           </p>
         </div>
         <div className="px-4 py-4 border-t border-slate-100">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {getProfileGuidance(activeProfile, advisory.aqi).precautions.map((p, i) => (
+            {(guidance?.precautions ?? []).map((p, i) => (
               <div key={i} className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg">
                 <Shield size={14} className="text-brand-500 mt-0.5 shrink-0" />
                 <span className="text-xs text-slate-700">{p}</span>
@@ -295,17 +302,6 @@ export default function CitizenAdvisory({ cityId }: CitizenAdvisoryProps) {
         </span>
       </div>
 
-      {/* Emergency Banner */}
-      {advisory.emergency.active && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3 animate-slide-up shadow-lg">
-          <AlertTriangle size={20} className="text-red-500 shrink-0 mt-0.5 animate-pulse-soft" />
-          <div>
-            <h3 className="text-sm font-bold text-red-800">HEALTH EMERGENCY — SEVERE AIR QUALITY</h3>
-            <p className="text-xs text-red-700 mt-1">{advisory.emergency.message}</p>
-            <p className="text-xs text-red-600 mt-1 font-medium">Helpline: {advisory.emergency.helpline}</p>
-          </div>
-        </div>
-      )}
 
       {/* Main Advisory Card */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -315,10 +311,20 @@ export default function CitizenAdvisory({ cityId }: CitizenAdvisoryProps) {
               <div className="flex items-center gap-2 mb-1">
                 <Shield size={16} style={{ color: advisory.color }} />
                 <span className="text-xs font-semibold uppercase tracking-wider font-mono" style={{ color: advisory.color }}>
-                  {advisory.category} — AQI {advisory.aqi}
+                  {advisory.category ?? 'No estimate'} — NAQI est. {aqiText}
                 </span>
               </div>
               <p className="text-sm text-slate-600 mt-2 leading-relaxed">{getMessage()}</p>
+              {advisory.healthStatement && (
+                <p className="text-xs text-slate-700 mt-3 leading-relaxed">
+                  <strong>CPCB health statement:</strong> {advisory.healthStatement}
+                  <span className="block text-[10px] text-slate-500 mt-0.5">{advisory.healthStatementSource}</span>
+                </p>
+              )}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <DataBasisBadge provenance={advisory.provenance} />
+                <span className="text-[10px] text-slate-500">{advisory.naqiLabel}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -368,7 +374,7 @@ export default function CitizenAdvisory({ cityId }: CitizenAdvisoryProps) {
                 onClick={() => setLanguage(lang.code)}
               >
                 <p className="text-xs font-semibold text-slate-600 mb-1">{lang.native} ({lang.label})</p>
-                <p className="text-xs text-slate-500 leading-relaxed">{advisory.multilingual[lang.code]}</p>
+                <p className="text-xs text-slate-500 leading-relaxed">{advisory.multilingual[lang.code] ?? 'Not available'}</p>
               </div>
             ))}
           </div>
@@ -378,28 +384,23 @@ export default function CitizenAdvisory({ cityId }: CitizenAdvisoryProps) {
         <div className="px-6 py-5 border-t border-slate-100 bg-slate-50">
           <div className="flex items-center gap-2 mb-2">
             <Phone size={14} className="text-slate-400" />
-            <h3 className="text-sm font-semibold text-slate-700">Emergency Contacts</h3>
+            <h3 className="text-sm font-semibold text-slate-700">Emergency contact</h3>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            <div className="bg-white rounded-lg p-3 border border-slate-200">
-              <span className="text-slate-500 block mb-0.5">Pollution Control</span>
-              <p className="font-semibold font-mono text-slate-700">1800-111-222</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-slate-200">
-              <span className="text-slate-500 block mb-0.5">Health Helpline</span>
-              <p className="font-semibold font-mono text-slate-700">1800-111-333</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-slate-200">
-              <span className="text-slate-500 block mb-0.5">Ambulance</span>
-              <p className="font-semibold font-mono text-slate-700">108</p>
-            </div>
-            <div className="bg-white rounded-lg p-3 border border-slate-200">
-              <span className="text-slate-500 block mb-0.5">Disaster Mgmt</span>
-              <p className="font-semibold font-mono text-slate-700">112</p>
-            </div>
+            {advisory.emergencyContacts.map(c => (
+              <div key={c.number} className="bg-white rounded-lg p-3 border border-slate-200">
+                <span className="text-slate-500 block mb-0.5">{c.label}</span>
+                <p className="font-semibold font-mono text-slate-700">{c.number}</p>
+              </div>
+            ))}
           </div>
+          <p className="text-[11px] text-slate-500 mt-2">{advisory.contactsNote}</p>
         </div>
       </div>
+
+      <p className="flex items-start gap-1.5 text-[11px] text-slate-500">
+        <Info size={12} className="shrink-0 mt-0.5" /> {advisory.disclaimer} {advisory.multilingualNote}
+      </p>
     </div>
   );
 }

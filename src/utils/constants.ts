@@ -8,12 +8,12 @@ export const AQI_COLORS = {
 };
 
 export const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Live Monitoring', icon: 'Activity' },
-  { id: 'sources', label: 'Source Contribution Analysis', icon: 'Search' },
-  { id: 'forecast', label: 'AQI Forecast', icon: 'TrendingUp' },
-  { id: 'simulator', label: 'Policy Simulator', icon: 'Settings' },
-  { id: 'enforcement', label: 'Enforcement Intelligence', icon: 'Shield' },
-  { id: 'comparative', label: 'Comparative Intelligence', icon: 'BarChart3' },
+  { id: 'dashboard', label: 'Current Conditions', icon: 'Activity' },
+  { id: 'sources', label: 'Source Context', icon: 'Search' },
+  { id: 'forecast', label: 'Model Forecast', icon: 'TrendingUp' },
+  { id: 'simulator', label: 'Scenario Explorer', icon: 'Settings' },
+  { id: 'enforcement', label: 'City Priority List', icon: 'Shield' },
+  { id: 'comparative', label: 'City Comparison', icon: 'BarChart3' },
   { id: 'brief', label: 'Executive Brief', icon: 'FileText' },
   { id: 'advisory', label: 'Citizen Advisory', icon: 'Users' },
 ] as const;
@@ -23,10 +23,10 @@ export type NavSection = typeof NAV_ITEMS[number]['id'];
 export const POLLUTANTS = [
   { key: 'pm25', label: 'PM2.5', unit: 'µg/m³', icon: 'Wind', description: 'Fine particulate matter' },
   { key: 'pm10', label: 'PM10', unit: 'µg/m³', icon: 'Wind', description: 'Coarse particulate matter' },
-  { key: 'no2', label: 'NO₂', unit: 'ppb', icon: 'Beaker', description: 'Nitrogen dioxide' },
-  { key: 'o3', label: 'O₃', unit: 'ppb', icon: 'Sun', description: 'Ozone' },
-  { key: 'so2', label: 'SO₂', unit: 'ppb', icon: 'Beaker', description: 'Sulfur dioxide' },
-  { key: 'co', label: 'CO', unit: 'ppb', icon: 'Beaker', description: 'Carbon monoxide' },
+  { key: 'no2', label: 'NO₂', unit: 'µg/m³', icon: 'Beaker', description: 'Nitrogen dioxide' },
+  { key: 'o3', label: 'O₃', unit: 'µg/m³', icon: 'Sun', description: 'Ozone' },
+  { key: 'so2', label: 'SO₂', unit: 'µg/m³', icon: 'Beaker', description: 'Sulfur dioxide' },
+  { key: 'co', label: 'CO', unit: 'µg/m³', icon: 'Beaker', description: 'Carbon monoxide' },
 ] as const;
 
 export const SOURCE_LABELS: Record<string, string> = {
@@ -43,6 +43,10 @@ export const SOURCE_COLORS: Record<string, string> = {
   biomass: '#c2410c',
   dust: '#a16207',
   others: '#64748b',
+};
+
+export const POLLUTANT_LABELS: Record<string, string> = {
+  pm25: 'PM2.5', pm10: 'PM10', no2: 'NO₂', o3: 'O₃', so2: 'SO₂', co: 'CO', nh3: 'NH₃', pb: 'Pb',
 };
 
 export const API_BASE = '/api';

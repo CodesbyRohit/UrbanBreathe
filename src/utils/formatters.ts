@@ -30,7 +30,11 @@ export function formatNumber(num: number): string {
   return num.toLocaleString();
 }
 
-export function getAQIColor(aqi: number): string {
+/** Neutral colour for unavailable values. */
+export const NO_DATA_COLOR = '#64748b';
+
+export function getAQIColor(aqi: number | null | undefined): string {
+  if (aqi == null || !Number.isFinite(aqi)) return NO_DATA_COLOR;
   if (aqi <= 50) return '#15803d';
   if (aqi <= 100) return '#4d7c0f';
   if (aqi <= 200) return '#854d0e';
@@ -40,7 +44,8 @@ export function getAQIColor(aqi: number): string {
 }
 
 /** Lighter AQI color variants for use on dark backgrounds (e.g., dark mode) */
-export function getAQIColorLight(aqi: number): string {
+export function getAQIColorLight(aqi: number | null | undefined): string {
+  if (aqi == null || !Number.isFinite(aqi)) return '#94a3b8';
   if (aqi <= 50) return '#22c55e';
   if (aqi <= 100) return '#84cc16';
   if (aqi <= 200) return '#facc15';
@@ -49,7 +54,8 @@ export function getAQIColorLight(aqi: number): string {
   return '#a78bfa';
 }
 
-export function getAQIBg(aqi: number): string {
+export function getAQIBg(aqi: number | null | undefined): string {
+  if (aqi == null || !Number.isFinite(aqi)) return '#f1f5f9';
   if (aqi <= 50) return '#dcfce7';
   if (aqi <= 100) return '#ecfccb';
   if (aqi <= 200) return '#fef9c3';
@@ -58,8 +64,8 @@ export function getAQIBg(aqi: number): string {
   return '#f3e8ff';
 }
 
-export function getAQILabel(aqi: number): string {
-  if (aqi == null || isNaN(aqi)) return 'Unknown';
+export function getAQILabel(aqi: number | null | undefined): string {
+  if (aqi == null || isNaN(aqi)) return 'No estimate';
   if (aqi <= 50) return 'Good';
   if (aqi <= 100) return 'Satisfactory';
   if (aqi <= 200) return 'Moderate';

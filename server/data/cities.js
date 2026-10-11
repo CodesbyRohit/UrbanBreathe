@@ -9,8 +9,6 @@ export const cities = [
     population: '32M',
     area: '1,484 sq km',
     description: 'National Capital Region — one of the most polluted cities globally.',
-    baseAQI: 320,
-    dominant: 'PM2.5',
   },
   {
     id: 'mumbai',
@@ -22,8 +20,6 @@ export const cities = [
     population: '21M',
     area: '603 sq km',
     description: 'Financial capital — coastal city with moderate pollution levels.',
-    baseAQI: 145,
-    dominant: 'PM10',
   },
   {
     id: 'bengaluru',
@@ -35,8 +31,6 @@ export const cities = [
     population: '12M',
     area: '741 sq km',
     description: 'Silicon Valley of India — rapid urbanization impacting air quality.',
-    baseAQI: 88,
-    dominant: 'PM2.5',
   },
   {
     id: 'kolkata',
@@ -48,8 +42,6 @@ export const cities = [
     population: '15M',
     area: '205 sq km',
     description: 'Eastern hub — industrial emissions and vehicular pollution.',
-    baseAQI: 195,
-    dominant: 'PM10',
   },
   {
     id: 'chennai',
@@ -61,8 +53,6 @@ export const cities = [
     population: '11M',
     area: '426 sq km',
     description: 'Coastal metropolis — moderate AQI with seasonal influences.',
-    baseAQI: 72,
-    dominant: 'NO2',
   },
   {
     id: 'hyderabad',
@@ -74,8 +64,6 @@ export const cities = [
     population: '10M',
     area: '650 sq km',
     description: 'Tech hub — developing industrial corridors.',
-    baseAQI: 82,
-    dominant: 'PM2.5',
   },
   {
     id: 'pune',
@@ -87,8 +75,6 @@ export const cities = [
     population: '7M',
     area: '331 sq km',
     description: 'Educational and industrial center.',
-    baseAQI: 98,
-    dominant: 'PM10',
   },
   {
     id: 'lucknow',
@@ -100,8 +86,6 @@ export const cities = [
     population: '5M',
     area: '349 sq km',
     description: 'Capital of UP — severe winter pollution due to stagnation.',
-    baseAQI: 215,
-    dominant: 'PM2.5',
   },
   {
     id: 'ahmedabad',
@@ -113,8 +97,6 @@ export const cities = [
     population: '8M',
     area: '464 sq km',
     description: 'Commercial center — moderate pollution with industrial impact.',
-    baseAQI: 112,
-    dominant: 'PM10',
   },
   {
     id: 'patna',
@@ -126,8 +108,6 @@ export const cities = [
     population: '4M',
     area: '250 sq km',
     description: 'High pollution due to construction and biomass burning.',
-    baseAQI: 245,
-    dominant: 'PM2.5',
   },
 ];
 

@@ -1,7 +1,9 @@
 import React from 'react';
-import { RefreshCw, Clock, Sun, Moon } from 'lucide-react';
+import { RefreshCw, Clock, Sun, Moon, PlayCircle } from 'lucide-react';
 import type { City, AirQualityData } from '../../types';
-import { formatAQI, getAQIColor, getAQIColorLight, getAQILabel, timeAgo } from '../../utils/formatters';
+import { getAQIColor, getAQIColorLight, getAQILabel, timeAgo } from '../../utils/formatters';
+import { formatIndex } from '../../utils/provenance';
+import DataBasisBadge from '../common/DataBasisBadge';
 
 interface HeaderProps {
   city: City | null;
@@ -11,9 +13,10 @@ interface HeaderProps {
   lastUpdated: string | null;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
+  onStartIntro?: () => void;
 }
 
-export default function Header({ city, airQuality, loading, onRefresh, lastUpdated, theme, onToggleTheme }: HeaderProps) {
+export default function Header({ city, airQuality, loading, onRefresh, lastUpdated, theme, onToggleTheme, onStartIntro }: HeaderProps) {
   const effectiveAqiColor = airQuality
     ? (theme === 'dark' ? getAQIColorLight(airQuality.aqi) : getAQIColor(airQuality.aqi))
     : undefined;
@@ -36,10 +39,10 @@ export default function Header({ city, airQuality, loading, onRefresh, lastUpdat
                       className="text-2xl font-bold leading-none"
                       style={{ color: effectiveAqiColor }}
                     >
-                      {formatAQI(airQuality.aqi)}
+                      {formatIndex(airQuality.aqi, airQuality.aqiIsLowerBound)}
                     </div>
-                    <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-                      AQI
+                    <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider" title={airQuality.naqi.label}>
+                      NAQI est.
                     </div>
                   </div>
                   <span
@@ -51,6 +54,7 @@ export default function Header({ city, airQuality, loading, onRefresh, lastUpdat
                   >
                     {getAQILabel(airQuality.aqi)}
                   </span>
+                  <DataBasisBadge provenance={airQuality.provenance} className="hidden lg:inline-flex" />
                 </div>
               </>
             )}
@@ -59,6 +63,16 @@ export default function Header({ city, airQuality, loading, onRefresh, lastUpdat
       </div>
 
       <div className="flex items-center gap-3">
+        {onStartIntro && (
+          <button
+            onClick={onStartIntro}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            aria-label="Play optional presentation intro"
+          >
+            <PlayCircle size={14} />
+            Intro
+          </button>
+        )}
         {/* Theme toggle */}
         <button
           onClick={onToggleTheme}
