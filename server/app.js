@@ -50,9 +50,18 @@ app.use('/api/simulation', simulationRouter);
 app.use('/api/brief', briefRouter);
 app.use('/api/advisory', advisoryRouter);
 
-// Health check
+// Health check. `deployment` identifies the running code (Vercel system
+// environment variables; null when running elsewhere) so archived responses
+// can be tied to a commit. The repository is public, so this reveals nothing new.
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    deployment: {
+      commit: process.env.VERCEL_GIT_COMMIT_SHA || null,
+      environment: process.env.VERCEL_ENV || null,
+    },
+  });
 });
 
 app.use('/api', apiNotFound);
