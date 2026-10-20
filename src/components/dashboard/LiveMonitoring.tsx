@@ -1,163 +1,162 @@
-import React, { useRef } from 'react';
-import { Wind, Thermometer, Droplets, Eye, Gauge, Compass, Info } from 'lucide-react';
-import {
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart, CartesianGrid,
-} from 'recharts';
+import React, { Suspense, lazy } from 'react';
+import { Activity } from 'lucide-react';
 import AQIGauge from './AQIGauge';
-import PollutantCard from './PollutantCard';
-import MetricCard from '../common/MetricCard';
+import PollutantTable from './PollutantTable';
 import DataBasisBadge from '../common/DataBasisBadge';
+import DataFreshness from '../common/DataFreshness';
+import CategoryBadge from '../common/CategoryBadge';
+import PageHeader from '../common/PageHeader';
+import IndiaMap from '../common/IndiaMap';
+import Notice from '../common/Notice';
+import { LoadingPanel, ErrorPanel, StaleBanner } from '../common/StateViews';
 import type { City, AirQualityData } from '../../types';
-import { POLLUTANTS, POLLUTANT_LABELS } from '../../utils/constants';
-import { getAQIColor, getAQILabel } from '../../utils/formatters';
-import { formatValue, formatCityTime } from '../../utils/provenance';
+import type { Resource } from '../../hooks/useResource';
+import { pollutantList } from '../../utils/constants';
+import { formatValue, formatAxisTime, formatCityTime } from '../../utils/provenance';
+
+const HistoryChart = lazy(() => import('./HistoryChart'));
 
 interface LiveMonitoringProps {
-  city: City | null;
-  airQuality: AirQualityData | null;
-  loading: boolean;
-  error?: string | null;
+  city: City;
+  resource: Resource<AirQualityData>;
+  cities: City[];
+  airQualityMap: Record<string, AirQualityData | null>;
+  onSelectCity: (id: string) => void;
 }
 
-export default function LiveMonitoring({ city, airQuality, loading, error }: LiveMonitoringProps) {
-  const prevAqiRef = useRef<number | null>(null);
+function WeatherList({ data, timeZone }: { data: AirQualityData; timeZone: string }) {
+  const unavailable = 'status' in data.provenance.weather ? data.provenance.weather : null;
+  const rows: [string, string][] = [
+    ['Temperature', `${formatValue(data.temperature)} °C`],
+    ['Relative humidity', `${formatValue(data.humidity)} %`],
+    ['Wind', `${formatValue(data.windSpeed, 1)} km/h${data.windDirection ? ` from ${data.windDirection}` : ''}`],
+    ['Surface pressure', `${formatValue(data.pressure)} hPa`],
+    ['Visibility', `${formatValue(data.visibility, 1)} km`],
+  ];
+  return (
+    <section className="panel p-5" aria-labelledby="weather-heading">
+      <h3 id="weather-heading" className="text-sm font-semibold text-slate-700">Weather (modelled)</h3>
+      {unavailable ? (
+        <p className="text-xs text-amber-700 mt-2">Weather data unavailable: {unavailable.reason ?? 'provider error'}. Air-quality values are unaffected.</p>
+      ) : (
+        <>
+          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            {rows.map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs text-slate-500">{label}</dt>
+                <dd className="font-medium text-slate-800 tabular">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-xs text-slate-500 mt-3">
+            Open-Meteo weather model, current conditions at {formatCityTime((data.provenance.weather as { observedAt?: string | null }).observedAt ?? null, timeZone)}. Context only; it does not change the index.
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
 
-  if (loading) {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-6 flex flex-col items-center justify-center h-80">
-          <div className="skeleton w-32 h-8 rounded-full mb-4" />
-          <div className="skeleton w-32 h-32 rounded-full" />
-          <div className="skeleton w-24 h-4 mt-4" />
-          <div className="skeleton w-36 h-3 mt-2" />
-        </div>
-        <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4">
-              <div className="skeleton w-14 h-3 mb-3" />
-              <div className="skeleton w-10 h-6 mb-2" />
-              <div className="skeleton w-16 h-3" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (!airQuality || !city) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center max-w-md">
-          <p className="text-sm text-slate-600 font-medium">Air-quality data is unavailable.</p>
-          <p className="text-xs text-slate-500 mt-1">{error || 'Please select a city and try again.'}</p>
-          <p className="text-xs text-slate-500 mt-1">No substitute values are shown.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const aqiColor = getAQIColor(airQuality.aqi);
-  const aqiLabel = getAQILabel(airQuality.aqi);
+export default function LiveMonitoring({ city, resource, cities, airQualityMap, onSelectCity }: LiveMonitoringProps) {
+  const { data, loading, error, reload } = resource;
   const tz = city.timezone;
 
-  const prevAqiSnapshot = prevAqiRef.current;
-  prevAqiRef.current = airQuality.aqi;
+  const header = (
+    <PageHeader
+      icon={<Activity size={18} />}
+      title={`Current conditions — ${city.name}`}
+      description="CPCB NAQI method applied to modelled CAMS concentrations. Not an official CPCB station AQI."
+    >
+      {data && <DataBasisBadge provenance={data.provenance} />}
+    </PageHeader>
+  );
 
-  const history = airQuality.history.map(p => ({
-    time: formatCityTime(p.time, tz).replace(/^\d+ \w+, /, ''),
-    pm25: p.pm25,
-    pm10: p.pm10,
-  }));
-  const dominant = airQuality.naqi.dominantPollutants.map(p => POLLUTANT_LABELS[p] || p).join(', ');
+  if (!data) {
+    return (
+      <div className="space-y-5">
+        {header}
+        {loading ? <LoadingPanel label={`Loading current conditions for ${city.name}`} rows={4} /> : <ErrorPanel message={error} onRetry={reload} />}
+      </div>
+    );
+  }
+
+  const history = data.history.map(p => ({ ...p, label: formatAxisTime(p.time, tz) }));
+  const ok = data.aqiStatus === 'ok';
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* NAQI estimate */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-6 flex flex-col items-center justify-center card-hover">
-          <AQIGauge
-            aqi={airQuality.aqi}
-            isLowerBound={airQuality.aqiIsLowerBound}
-            label={aqiLabel}
-            color={aqiColor}
-            prevAqi={prevAqiSnapshot}
-          />
-          <div className="mt-3 flex flex-col items-center gap-2 text-center">
-            <DataBasisBadge provenance={airQuality.provenance} referenceTime={airQuality.referenceTime} timeZone={tz} />
-            {airQuality.aqiStatus === 'ok' ? (
-              <p className="text-[11px] text-slate-500">Dominant pollutant: <strong>{dominant}</strong></p>
-            ) : (
-              <p className="text-[11px] text-amber-700" role="status">
-                Not enough valid data for a NAQI estimate. {airQuality.naqi.reasons.join(' ')}
-              </p>
-            )}
-            <p className="text-[10px] text-slate-500 max-w-[16rem] leading-snug">{airQuality.naqi.label}</p>
-          </div>
-        </div>
+    <div className="space-y-5">
+      {header}
+      {error && <StaleBanner message={error} onRetry={reload} />}
 
-        <div className="lg:col-span-2 space-y-3">
-          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-            <span className="w-1 h-1 rounded-full bg-slate-400" />
-            Weather (modelled)
-          </span>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard label="Temperature" value={formatValue(airQuality.temperature)} unit="°C" icon={<Thermometer size={16} />} />
-            <MetricCard label="Humidity" value={formatValue(airQuality.humidity)} unit="%" icon={<Droplets size={16} />} />
-            <MetricCard label="Wind Speed" value={formatValue(airQuality.windSpeed, 1)} unit="km/h" icon={<Wind size={16} />} subtitle={airQuality.windDirection ?? undefined} />
-            <MetricCard label="Visibility" value={formatValue(airQuality.visibility, 1)} unit="km" icon={<Eye size={16} />} />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard label="Pressure" value={formatValue(airQuality.pressure)} unit="hPa" icon={<Gauge size={16} />} />
-            <MetricCard label="Wind Dir" value={airQuality.windDirection ?? '--'} icon={<Compass size={16} />} subtitle="Direction" />
-            <MetricCard label="PM2.5 / PM10" value={`${formatValue(airQuality.pm25)} / ${formatValue(airQuality.pm10)}`} unit="µg/m³" subtitle="Hourly" />
-            <MetricCard label="Category" value={airQuality.aqiCategory ?? '--'} color={aqiColor} subtitle="NAQI estimate" />
-          </div>
-          {'status' in airQuality.provenance.weather && (
-            <p className="text-[11px] text-amber-700">Weather data unavailable: {airQuality.provenance.weather.reason}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <section className="panel p-5 flex flex-col items-center text-center gap-3" aria-labelledby="estimate-heading">
+          <h3 id="estimate-heading" className="self-start text-sm font-semibold text-slate-700">NAQI-method estimate</h3>
+          <AQIGauge aqi={data.aqi} isLowerBound={data.aqiIsLowerBound} />
+          <CategoryBadge index={data.aqi} label={data.aqiCategory} size="md" />
+          {ok ? (
+            <p className="text-sm text-slate-600">
+              Dominant pollutant: <strong className="text-slate-800">{pollutantList(data.naqi.dominantPollutants)}</strong>
+              {data.aqiIsLowerBound && <span className="block text-xs text-slate-500 mt-1">“401+”: the CPCB Severe band has no upper breakpoint, so only a lower bound can be given.</span>}
+            </p>
+          ) : (
+            <p className="text-sm text-amber-700" role="status">Not enough valid data for an estimate. {data.naqi.reasons.join(' ')}</p>
           )}
-        </div>
+          <DataFreshness referenceTime={data.referenceTime} retrievedAt={data.provenance.airQuality.retrievedAt} timeZone={tz} className="justify-center" />
+          <p className="text-xs text-slate-500 leading-snug">
+            Highest of the pollutant sub-indices, from 24-hour means (8-hour for O₃ and CO) ending at this hour. Needs at least three pollutants including PM2.5 or PM10.
+          </p>
+        </section>
+
+        <section className="panel p-5 lg:col-span-2" aria-labelledby="pollutants-heading">
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+            <h3 id="pollutants-heading" className="text-sm font-semibold text-slate-700">Pollutants behind the estimate</h3>
+            <span className="text-xs text-slate-500">Modelled concentrations · CO converted to mg/m³ for the CPCB table</span>
+          </div>
+          <PollutantTable data={data} />
+        </section>
       </div>
 
-      {/* Pollutants Grid */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-700">Pollutant Concentrations</h2>
-          <span className="text-[10px] text-slate-500">All values µg/m³ · modelled · sub-index from 24-h (8-h for O₃/CO) means</span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {POLLUTANTS.map((p) => (
-            <PollutantCard key={p.key} pollutant={p} data={airQuality} />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <section className="panel p-5 lg:col-span-2" aria-labelledby="history-heading">
+          <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+            <h3 id="history-heading" className="text-sm font-semibold text-slate-700">Past 24 hours — hourly PM2.5 and PM10 (µg/m³)</h3>
+            <span className="text-xs text-slate-500">CAMS model values for the {city.name} grid cell, not station measurements</span>
+          </div>
+          {history.length === 0 ? (
+            <p className="text-sm text-slate-500">No hourly values available.</p>
+          ) : (
+            <>
+              <div aria-hidden="true" className="h-[220px]">
+                <Suspense fallback={<div className="skeleton w-full h-full" />}>
+                  <HistoryChart rows={history} />
+                </Suspense>
+              </div>
+              <details className="mt-2 text-xs">
+                <summary className="cursor-pointer text-slate-600 hover:text-slate-800">Show the hourly values as a table</summary>
+                <div className="overflow-x-auto mt-2 max-h-64">
+                  <table className="data-table w-full text-xs">
+                    <caption className="sr-only">Hourly modelled PM2.5 and PM10 for the past 24 hours</caption>
+                    <thead><tr><th scope="col">Hour ({tz === 'Asia/Kolkata' ? 'IST' : tz})</th><th scope="col">PM2.5 µg/m³</th><th scope="col">PM10 µg/m³</th></tr></thead>
+                    <tbody>
+                      {history.map(p => (
+                        <tr key={p.time}><td>{p.label}</td><td className="tabular">{formatValue(p.pm25, 1)}</td><td className="tabular">{formatValue(p.pm10, 1)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </>
+          )}
+        </section>
+        <WeatherList data={data} timeZone={tz} />
       </div>
 
-      {/* Last 24 hours of modelled PM */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 card-hover">
-        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-          <h2 className="text-sm font-semibold text-slate-700">Last 24 hours — modelled PM2.5 and PM10</h2>
-          <span className="text-[11px] text-slate-500 flex items-center gap-1">
-            <Info size={12} /> Hourly CAMS model values for {city.name}, not station measurements
-          </span>
-        </div>
-        {history.length === 0 ? (
-          <p className="text-xs text-slate-500">No hourly values available.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={history}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="time" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#475569' }} interval={3} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#475569' }} width={40} unit="" />
-              <Tooltip
-                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                labelStyle={{ fontWeight: 600 }}
-                formatter={(v, name) => [v == null ? '--' : `${v} µg/m³`, name === 'pm25' ? 'PM2.5' : 'PM10']}
-              />
-              <Area type="monotone" dataKey="pm10" stroke="#a16207" strokeWidth={1.5} fill="none" connectNulls={false} />
-              <Area type="monotone" dataKey="pm25" stroke="#2675dc" strokeWidth={2} fill="none" connectNulls={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+      <IndiaMap cities={cities} selectedId={city.id} airQualityMap={airQualityMap} onSelect={onSelectCity} />
+
+      <Notice>
+        {data.provenance.airQuality.attribution}. The CAMS global model has a grid of about 45 km over India, so these values describe a regional average around {city.name}, not a street or a monitoring station.
+        For official measurements see the CPCB station AQI.
+      </Notice>
     </div>
   );
 }

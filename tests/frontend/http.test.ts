@@ -40,6 +40,22 @@ test('server JSON errors surface their message and code', async () => {
     err instanceof ApiError && err.status === 503 && err.code === 'UPSTREAM_UNAVAILABLE' && /unavailable/.test(err.message));
 });
 
+test('malformed JSON in a 200 response becomes an ApiError, not a crash', async () => {
+  globalThis.fetch = (async () => new Response('<html>oops', { status: 200 })) as typeof fetch;
+  await assert.rejects(requestJson('/api/x'), (err: unknown) => err instanceof ApiError && err.code === 'INVALID_RESPONSE');
+});
+
+test('429 without a JSON body gets a rate-limit message', async () => {
+  globalThis.fetch = (async () => new Response('slow down', { status: 429 })) as typeof fetch;
+  await assert.rejects(requestJson('/api/x'), (err: unknown) =>
+    err instanceof ApiError && err.code === 'RATE_LIMITED' && /Too many requests/.test(err.message));
+});
+
+test('network failure becomes a readable ApiError', async () => {
+  globalThis.fetch = (async () => { throw new TypeError('Failed to fetch'); }) as typeof fetch;
+  await assert.rejects(requestJson('/api/x'), (err: unknown) => err instanceof ApiError && err.code === 'NETWORK');
+});
+
 test('successful JSON responses are returned', async () => {
   globalThis.fetch = (async () => new Response(JSON.stringify({ ok: 1 }), { status: 200 })) as typeof fetch;
   assert.deepEqual(await requestJson('/api/x'), { ok: 1 });

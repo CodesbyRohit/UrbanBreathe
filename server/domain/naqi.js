@@ -79,7 +79,12 @@ function roundTo(value, decimals) {
 /**
  * Sub-index for one pollutant from its averaged concentration, already in the
  * CPCB unit (µg/m³; mg/m³ for CO).
- * Returns { subIndex, isLowerBound, category } or null for unusable input.
+ * Returns { subIndex, isLowerBound, category, concentrationBand } or null for
+ * unusable input. `category` follows the index value (the same rule as the
+ * overall AQI), `concentrationBand` is the Table 3.11 row the concentration
+ * falls in. They differ only exactly at a band's lower breakpoint, where the
+ * "subtract one from ILO" rule yields the previous category's top index (e.g.
+ * PM2.5 61 µg/m³ -> 100, Satisfactory, in the Moderate concentration band).
  * In the open-ended Severe band the index cannot be interpolated, so 401 is
  * returned with isLowerBound = true (displayed as "401+").
  */
@@ -90,7 +95,7 @@ export function subIndexFor(parameter, concentration) {
 
   const c = roundTo(concentration, bp.decimals);
   if (c > bp.severeAbove) {
-    return { subIndex: 401, isLowerBound: true, category: 'Severe' };
+    return { subIndex: 401, isLowerBound: true, category: 'Severe', concentrationBand: 'Severe' };
   }
   const bandIndex = bp.bands.findIndex(([lo, hi]) => c >= lo && c <= hi);
   if (bandIndex === -1) return null; // unreachable for rounded, non-negative input
@@ -99,7 +104,17 @@ export function subIndexFor(parameter, concentration) {
   // CUPS/82/2014-15 §3.5: "subtract one from ILO, if ILO is greater than 50".
   const iLo = bandMin > 50 ? bandMin - 1 : bandMin;
   const subIndex = Math.round(((iHi - iLo) / (bHi - bLo)) * (c - bLo) + iLo);
-  return { subIndex, isLowerBound: false, category: NAQI_CATEGORIES[bandIndex].label };
+  return {
+    subIndex,
+    isLowerBound: false,
+    category: categoryForIndex(subIndex),
+    concentrationBand: NAQI_CATEGORIES[bandIndex].label,
+  };
+}
+
+/** Round an averaged concentration for display at one decimal beyond the table's precision. */
+export function displayAverage(parameter, value) {
+  return roundTo(value, NAQI_BREAKPOINTS[parameter].decimals + 1);
 }
 
 /**
@@ -168,18 +183,19 @@ export function computeNaqi(series, referenceTime) {
       windowEnd: avg.windowEnd,
     };
     if (avg.validHours < required) {
-      subIndices[parameter] = { ...base, status: 'insufficient_data', average: null, averageRaw: null, subIndex: null, isLowerBound: false, category: null };
+      subIndices[parameter] = { ...base, status: 'insufficient_data', average: null, averageRaw: null, subIndex: null, isLowerBound: false, category: null, concentrationBand: null };
       continue;
     }
     const si = subIndexFor(parameter, avg.average);
     subIndices[parameter] = {
       ...base,
       status: 'ok',
-      average: roundTo(avg.average, bp.decimals + 1), // for display
+      average: displayAverage(parameter, avg.average), // for display
       averageRaw: avg.average, // full precision, for further calculation
       subIndex: si.subIndex,
       isLowerBound: si.isLowerBound,
       category: si.category,
+      concentrationBand: si.concentrationBand,
     };
   }
   return aggregateSubIndices(subIndices);

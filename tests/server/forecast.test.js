@@ -98,6 +98,23 @@ describe('GET /api/forecast/:cityId', () => {
     assert.match(body.naqiLabel, /not an official CPCB/);
   });
 
+  test('recent modelled hours are separate from forecast points and excluded from the peak', async () => {
+    const body = await getForecast();
+    assert.equal(body.recent.length, 24);
+    assert.equal(body.recent.at(-1).hoursAhead, 0);
+    assert.equal(body.recent.at(-1).time, body.referenceTime);
+    assert.ok(body.recent.every(p => p.hoursAhead <= 0));
+    assert.match(body.recentNote, /not station observations/);
+    assert.ok(body.points.some(p => p.time === body.peak.time));
+  });
+
+  test('reports retrieval time, not an invented model issue time', async () => {
+    const body = await getForecast();
+    assert.equal(body.issuedAt, undefined);
+    assert.equal(body.modelRunTime, null);
+    assert.equal(body.retrievedAt, body.provenance.airQuality.retrievedAt);
+  });
+
   test('season is post-monsoon in October and reported with its basis', async () => {
     const body = await getForecast();
     assert.ok(body.season.basis.includes('IMD'));

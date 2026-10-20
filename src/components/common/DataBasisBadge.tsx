@@ -23,7 +23,7 @@ export default function DataBasisBadge({ provenance, referenceTime, timeZone, cl
   const Icon = badge.tone === 'demo' ? AlertTriangle : badge.tone === 'modelled' ? FlaskConical : badge.tone === 'measured' ? Radio : Info;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium ${TONE_STYLES[badge.tone]} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-xs font-medium ${TONE_STYLES[badge.tone]} ${className}`}
       title={badge.detail}
     >
       <Icon size={12} aria-hidden="true" />

@@ -41,16 +41,35 @@ const AQ_VARIABLES = {
 // Open-Meteo labels mass concentration "μg/m³" (Greek mu); accept the micro sign too.
 const MICROGRAM_LABELS = new Set(['μg/m³', 'µg/m³']);
 
+// url -> { value, fetchedAt, expires }. `fetchedAt` is when the upstream request
+// completed, so cached responses keep reporting their real retrieval time.
 const cache = new Map();
+// url -> Promise for requests in flight, so concurrent callers (e.g. the
+// dashboard loading several views for one city) share a single upstream call.
+const inFlight = new Map();
 
 export function clearProviderCache() {
   cache.clear();
+  inFlight.clear();
 }
 
-async function fetchJson(url, label) {
-  const hit = cache.get(url);
-  if (hit && hit.expires > Date.now()) return hit.value;
+async function readBoundedJson(res, label) {
+  const declared = Number(res.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > upstreamConfig.maxResponseBytes) {
+    throw upstreamUnavailable(`${label} returned an unexpectedly large response.`, { provider: 'open-meteo', reason: 'response_too_large' });
+  }
+  const text = await res.text();
+  if (text.length > upstreamConfig.maxResponseBytes) {
+    throw upstreamUnavailable(`${label} returned an unexpectedly large response.`, { provider: 'open-meteo', reason: 'response_too_large' });
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw upstreamUnavailable(`${label} returned an invalid response.`, { provider: 'open-meteo', reason: 'invalid_json' });
+  }
+}
 
+async function fetchUpstream(url, label) {
   let res;
   try {
     res = await fetch(url, { signal: AbortSignal.timeout(upstreamConfig.timeoutMs) });
@@ -61,16 +80,21 @@ async function fetchJson(url, label) {
   if (!res.ok) {
     throw upstreamUnavailable(`${label} is unavailable (HTTP ${res.status}).`, { provider: 'open-meteo', reason: res.status === 429 ? 'rate_limited' : 'http_error', status: res.status });
   }
-  let value;
-  try {
-    value = await res.json();
-  } catch {
-    throw upstreamUnavailable(`${label} returned an invalid response.`, { provider: 'open-meteo', reason: 'invalid_json' });
-  }
-
+  const value = await readBoundedJson(res, label);
+  const entry = { value, fetchedAt: new Date().toISOString(), expires: Date.now() + upstreamConfig.cacheTtlMs };
   if (cache.size >= upstreamConfig.cacheMaxEntries) cache.delete(cache.keys().next().value);
-  cache.set(url, { value, expires: Date.now() + upstreamConfig.cacheTtlMs });
-  return value;
+  cache.set(url, entry);
+  return entry;
+}
+
+/** Cached JSON fetch. Resolves to { value, fetchedAt }; failures are never cached. */
+async function fetchJson(url, label) {
+  const hit = cache.get(url);
+  if (hit && hit.expires > Date.now()) return hit;
+  if (inFlight.has(url)) return inFlight.get(url);
+  const pending = fetchUpstream(url, label).finally(() => inFlight.delete(url));
+  inFlight.set(url, pending);
+  return pending;
 }
 
 function schemaError(label, problem) {
@@ -96,7 +120,7 @@ export async function fetchAirQualitySeries(lat, lon) {
   const url = `${AQ_URL}?latitude=${lat}&longitude=${lon}` +
     `&hourly=${Object.keys(AQ_VARIABLES).join(',')}` +
     '&past_days=2&forecast_days=4&timezone=GMT';
-  const data = await fetchJson(url, label);
+  const { value: data, fetchedAt } = await fetchJson(url, label);
 
   const hourly = data?.hourly;
   if (!hourly || !Array.isArray(hourly.time) || hourly.time.length === 0) throw schemaError(label, 'missing hourly.time');
@@ -112,7 +136,7 @@ export async function fetchAirQualitySeries(lat, lon) {
     series[key] = values.map(cleanValue);
   }
 
-  return { source: AIR_QUALITY_SOURCE, retrievedAt: new Date().toISOString(), unit: 'ug/m3', times, series };
+  return { source: AIR_QUALITY_SOURCE, retrievedAt: fetchedAt, unit: 'ug/m3', times, series };
 }
 
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -128,13 +152,13 @@ export async function fetchCurrentWeather(lat, lon) {
   const url = `${WEATHER_URL}?latitude=${lat}&longitude=${lon}` +
     '&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure,visibility' +
     '&timezone=GMT';
-  const data = await fetchJson(url, label);
+  const { value: data, fetchedAt } = await fetchJson(url, label);
   const c = data?.current;
   if (!c || typeof c.time !== 'string') throw schemaError(label, 'missing current block');
   const visibilityM = cleanValue(c.visibility);
   return {
     source: WEATHER_SOURCE,
-    retrievedAt: new Date().toISOString(),
+    retrievedAt: fetchedAt,
     observedAt: toUtcIso(c.time),
     temperature: cleanValue(c.temperature_2m),
     humidity: cleanValue(c.relative_humidity_2m),

@@ -18,6 +18,10 @@ export const upstreamUnavailable = (message, details) =>
 export function sendError(res, status, code, message, details) {
   const body = { error: { code, message } };
   if (details !== undefined) body.error.details = details;
+  // Never let a CDN or browser cache an error (e.g. a transient upstream 503).
+  res.set('Cache-Control', 'no-store');
+  res.removeHeader('Vercel-CDN-Cache-Control');
+  if (status === 503 && details?.reason === 'rate_limited') res.set('Retry-After', '60');
   res.status(status).json(body);
 }
 

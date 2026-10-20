@@ -112,26 +112,27 @@ export default function CitySelector({ cities, selectedId, onSelect }: CitySelec
         ref={triggerRef}
         type="button"
         id="city-selector"
-        aria-label="Select a city"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls="city-listbox"
+        aria-activedescendant={isOpen && highlightedIndex >= 0 ? `city-option-${highlightedIndex}` : undefined}
         onClick={() => setIsOpen(prev => !prev)}
         onKeyDown={handleKeyDown}
         className={`
-          flex items-center gap-1.5 text-sm font-medium
-          bg-transparent border-none outline-none cursor-pointer
-          focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600
-          rounded-md transition-colors
-          text-slate-700
-          px-2 py-1 -ml-2
+          flex items-center gap-1.5 text-sm font-semibold
+          bg-transparent border border-slate-200 cursor-pointer
+          rounded-lg transition-colors
+          text-slate-800
+          px-2.5 py-1.5
           hover:bg-slate-100
         `}
       >
         <MapPin size={14} className="text-slate-400 shrink-0" />
         <span className={selectedCity ? '' : 'text-slate-400'}>
-          {selectedCity ? `${selectedCity.name}, ${selectedCity.state}` : 'Select city'}
+          {selectedCity ? selectedCity.name : 'Select city'}
         </span>
+        {selectedCity && <span className="hidden sm:inline font-normal text-slate-500">· {selectedCity.state}</span>}
+        <span className="sr-only">, change city</span>
         <ChevronDown
           size={14}
           className={`text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
@@ -144,7 +145,6 @@ export default function CitySelector({ cities, selectedId, onSelect }: CitySelec
           id="city-listbox"
           role="listbox"
           aria-label="Cities"
-          aria-activedescendant={highlightedIndex >= 0 ? `city-option-${highlightedIndex}` : undefined}
           tabIndex={-1}
           className={`
             absolute left-0 top-full mt-1 z-50

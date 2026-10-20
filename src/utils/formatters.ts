@@ -1,37 +1,17 @@
-export function formatAQI(aqi: number): string {
-  if (aqi >= 1000) return `${Math.round(aqi / 100) / 10}k`;
-  return String(Math.round(aqi));
-}
-
-export function formatConcentration(value: number, unit: string): string {
-  if (value == null) return '--';
-  if (unit === 'µg/m³') return value < 1 ? '<1' : Math.round(value).toLocaleString();
-  if (unit === 'ppb') return Math.round(value).toLocaleString();
-  return value.toFixed(1);
-}
-
-export function formatTemperature(celsius: number): string {
-  return `${Math.round(celsius)}°C`;
-}
-
-export function formatPercentage(value: number): string {
-  return `${Math.round(value)}%`;
-}
-
-export function formatCrores(crores: number): string {
-  if (crores >= 100) return `₹${(crores / 100).toFixed(1)}B`;
-  return `₹${crores.toFixed(0)}Cr`;
-}
-
-export function formatNumber(num: number): string {
-  if (num >= 10000000) return `${(num / 10000000).toFixed(1)}Cr`;
-  if (num >= 100000) return `${(num / 100000).toFixed(1)}L`;
-  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-  return num.toLocaleString();
-}
+// CPCB NAQI category helpers for display. Colour is never the only signal:
+// every use pairs it with the category name.
 
 /** Neutral colour for unavailable values. */
 export const NO_DATA_COLOR = '#64748b';
+
+export const CATEGORY_RANGES: { label: string; min: number; max: number | null }[] = [
+  { label: 'Good', min: 0, max: 50 },
+  { label: 'Satisfactory', min: 51, max: 100 },
+  { label: 'Moderate', min: 101, max: 200 },
+  { label: 'Poor', min: 201, max: 300 },
+  { label: 'Very Poor', min: 301, max: 400 },
+  { label: 'Severe', min: 401, max: null },
+];
 
 export function getAQIColor(aqi: number | null | undefined): string {
   if (aqi == null || !Number.isFinite(aqi)) return NO_DATA_COLOR;
@@ -54,16 +34,6 @@ export function getAQIColorLight(aqi: number | null | undefined): string {
   return '#a78bfa';
 }
 
-export function getAQIBg(aqi: number | null | undefined): string {
-  if (aqi == null || !Number.isFinite(aqi)) return '#f1f5f9';
-  if (aqi <= 50) return '#dcfce7';
-  if (aqi <= 100) return '#ecfccb';
-  if (aqi <= 200) return '#fef9c3';
-  if (aqi <= 300) return '#ffedd5';
-  if (aqi <= 400) return '#fee2e2';
-  return '#f3e8ff';
-}
-
 export function getAQILabel(aqi: number | null | undefined): string {
   if (aqi == null || isNaN(aqi)) return 'No estimate';
   if (aqi <= 50) return 'Good';
@@ -72,17 +42,4 @@ export function getAQILabel(aqi: number | null | undefined): string {
   if (aqi <= 300) return 'Poor';
   if (aqi <= 400) return 'Very Poor';
   return 'Severe';
-}
-
-export function timeAgo(dateString: string): string {
-  const now = Date.now();
-  const date = new Date(dateString).getTime();
-  const diff = now - date;
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }

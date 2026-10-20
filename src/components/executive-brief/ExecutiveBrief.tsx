@@ -1,265 +1,157 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Download, Printer, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import React from 'react';
+import { FileText, Printer, RefreshCw } from 'lucide-react';
 import { generateBrief } from '../../services/api';
-import type { ExecutiveBrief as BriefData } from '../../types';
-import { getAQIColor } from '../../utils/formatters';
+import { useResource } from '../../hooks/useResource';
+import { useAqiColor } from '../../hooks/useTheme';
+import type { City, ExecutiveBrief as BriefData, SourceInfo } from '../../types';
 import { formatIndex, formatValue, formatCityTime } from '../../utils/provenance';
 import { POLLUTANT_LABELS } from '../../utils/constants';
+import PageHeader from '../common/PageHeader';
 import DataBasisBadge from '../common/DataBasisBadge';
+import CategoryBadge from '../common/CategoryBadge';
+import { LoadingPanel, ErrorPanel, StaleBanner } from '../common/StateViews';
 
 interface ExecutiveBriefProps {
-  cityId: string;
+  city: City;
 }
 
-export default function ExecutiveBrief({ cityId }: ExecutiveBriefProps) {
-  const [brief, setBrief] = useState<BriefData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function Section({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <section className="px-6 py-5 border-b border-slate-100 avoid-break">
+      <h4 className="text-sm font-semibold text-slate-800 mb-2">{n}. {title}</h4>
+      {children}
+    </section>
+  );
+}
 
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
-    generateBrief(cityId)
-      .then(setBrief)
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [cityId]);
+export default function ExecutiveBrief({ city }: ExecutiveBriefProps) {
+  const { data: brief, loading, error, reload } = useResource<BriefData>(city.id, signal => generateBrief(city.id, signal));
+  const aqiColor = useAqiColor();
+  const tz = city.timezone;
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const header = (
+    <PageHeader icon={<FileText size={18} />} title={`Situation brief — ${city.name}`} description="Printable summary built from the same data as the dashboard. Verify against official CPCB data before acting.">
+      <button type="button" onClick={reload} className="btn-secondary" disabled={loading}>
+        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} aria-hidden="true" /> Regenerate
+      </button>
+      <button type="button" onClick={() => window.print()} className="btn-primary" disabled={!brief}>
+        <Printer size={14} aria-hidden="true" /> Print / Save as PDF
+      </button>
+    </PageHeader>
+  );
 
-  const handleExport = () => {
-    const content = document.getElementById('brief-content');
-    if (!content) return;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${brief?.title || 'Executive Brief'}</title>
-          <style>
-            @page { margin: 20mm 15mm; size: A4; }
-            @media print {
-              .page-break { page-break-before: always; }
-              .avoid-break { page-break-inside: avoid; }
-            }
-            body { font-family: Inter, system-ui, sans-serif; color: #0f172a; padding: 0; line-height: 1.6; max-width: 210mm; margin: 0 auto; }
-            .header { text-align: center; padding: 24px 0 16px; border-bottom: 2px solid #3b91e8; margin-bottom: 24px; }
-            .header h1 { font-size: 22px; margin: 0; color: #0f172a; }
-            .header p { font-size: 12px; color: #64748b; margin: 4px 0 0; }
-            h2 { font-size: 16px; margin-top: 28px; margin-bottom: 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
-            h3 { font-size: 13px; margin-top: 16px; margin-bottom: 8px; color: #475569; }
-            p { font-size: 12px; color: #475569; margin-bottom: 8px; line-height: 1.7; }
-            .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
-            .metric { display: inline-block; padding: 8px 16px; background: #f8fafc; border-radius: 8px; margin: 4px; }
-            .metric-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; }
-            .metric-value { font-size: 20px; font-weight: 700; }
-            .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
-            table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 12px 0; }
-            td, th { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; text-align: left; }
-            th { color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-            .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; }
-            .rec { display: flex; gap: 10px; padding: 10px; background: #f8fafc; border-radius: 8px; margin-bottom: 8px; page-break-inside: avoid; }
-            .priority-CRITICAL { background: #fee2e2; color: #dc2626; }
-            .priority-HIGH { background: #ffedd5; color: #ea580c; }
-            .priority-MEDIUM { background: #dbeafe; color: #2563eb; }
-            .priority-LOW { background: #f0fdf4; color: #15803d; }
-            .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; page-break-inside: avoid; }
-            .outcome-box { padding: 12px; border-radius: 8px; border: 1px solid; }
-            .classification { font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 4px 10px; border: 1px solid #94a3b8; display: inline-block; border-radius: 4px; }
-          </style>
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        </head>
-        <body>
-          <div class="header">
-            <h1>UrbanBreathe</h1>
-            <p>Air quality situation brief</p>
-          </div>
-          ${content.innerHTML}
-          <div class="footer">
-            <p>Generated by UrbanBreathe • ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</p>
-            <p>Page 1 of 1</p>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => { printWindow.print(); }, 800);
-  };
-
-  if (loading) {
+  if (!brief) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-          Generating executive brief...
-        </div>
+      <div className="space-y-5">
+        {header}
+        {loading ? <LoadingPanel label="Generating brief" rows={5} /> : <ErrorPanel title="The brief could not be generated" message={error} onRetry={reload} />}
       </div>
     );
   }
 
-  if (error || !brief) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-red-700 text-sm text-center">
-          <p>Could not generate the brief: {error || 'Unknown error'}</p>
-          <p className="text-xs text-slate-500 mt-1">No brief is produced from substitute data.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const summary = brief.executiveSummary;
+  const s = brief.executiveSummary;
+  const prov = brief.dataBasis.provenance;
+  const weather = 'status' in prov.weather ? null : (prov.weather as SourceInfo);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header Actions */}
-      <div className="flex items-center justify-between no-print">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
-            <FileText size={18} className="text-brand-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">Executive Decision Brief</h2>
-            <p className="text-sm text-slate-500">Situation summary from modelled data — verify against official CPCB data</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
-          >
-            <Printer size={14} /> Print
-          </button>
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 transition-colors"
-          >
-            <Download size={14} /> Export PDF
-          </button>
-        </div>
-      </div>
+    <div className="space-y-5">
+      <div className="no-print">{header}</div>
+      {error && <div className="no-print"><StaleBanner message={error} onRetry={reload} /></div>}
 
-      {/* Brief Content - print optimized */}
-      <div id="brief-content" className="bg-white rounded-xl border border-slate-200 overflow-hidden print:border-0 print:shadow-none">
-        <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white print:bg-white print:border-b-2">
-          <div className="flex items-center gap-2 mb-2">
-            <DataBasisBadge provenance={brief.dataBasis.provenance} referenceTime={brief.dataBasis.referenceTime} />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900">{brief.title}</h3>
-          <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 flex-wrap">
-            <span>{brief.date}</span>
-            <span className="flex items-center gap-1"><Clock size={11} /> Generated {formatCityTime(brief.generatedAt)}</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">{brief.dataBasis.label}</p>
-        </div>
+      <article id="brief-content" className="panel overflow-hidden max-w-4xl mx-auto print:max-w-none" aria-labelledby="brief-title">
+        <header className="px-6 py-5 border-b border-slate-200">
+          <p className="print-only text-xs text-slate-500 mb-1">UrbanBreathe · {window.location.origin}</p>
+          <div className="mb-2"><DataBasisBadge provenance={prov} referenceTime={brief.dataBasis.referenceTime} timeZone={tz} /></div>
+          <h3 id="brief-title" className="text-xl font-bold text-slate-900">{brief.title}</h3>
+          <p className="text-xs text-slate-500 mt-1">{brief.date} · generated {formatCityTime(brief.generatedAt, tz)}</p>
+          <p className="text-xs text-slate-600 mt-1">{brief.dataBasis.label}</p>
+        </header>
 
-        {/* Summary */}
-        <div className="px-6 py-5 border-b border-slate-100 avoid-break">
-          <h4 className="text-sm font-semibold text-slate-800 mb-3">1. Summary</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-slate-50 rounded-lg p-3 text-center">
-              <div className="text-xs text-slate-500 mb-1">NAQI estimate</div>
-              <div className="text-2xl font-bold font-mono" style={{ color: getAQIColor(summary.currentAQI) }}>
-                {formatIndex(summary.currentAQI, summary.currentAQIIsLowerBound)}
-              </div>
-              <div className="text-xs font-medium text-slate-600">{summary.category ?? 'Insufficient data'}</div>
+        <Section n={1} title="Summary">
+          <dl className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="rounded-lg bg-slate-50 p-3">
+              <dt className="text-xs text-slate-500">NAQI-method estimate</dt>
+              <dd className="text-2xl font-bold tabular" style={{ color: aqiColor(s.currentAQI) }}>{formatIndex(s.currentAQI, s.currentAQIIsLowerBound)}</dd>
+              <dd><CategoryBadge index={s.currentAQI} label={s.category} /></dd>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3 text-center">
-              <div className="text-xs text-slate-500 mb-1">72-h model peak</div>
-              <div className="text-lg font-bold font-mono" style={{ color: getAQIColor(summary.forecastPeakAQI) }}>
-                {formatIndex(summary.forecastPeakAQI, summary.forecastPeakIsLowerBound)}
-              </div>
-              <div className="text-xs text-slate-500">Not evaluated</div>
+            <div className="rounded-lg bg-slate-50 p-3">
+              <dt className="text-xs text-slate-500">72-h model peak (not evaluated)</dt>
+              <dd className="text-2xl font-bold tabular" style={{ color: aqiColor(s.forecastPeakAQI) }}>{formatIndex(s.forecastPeakAQI, s.forecastPeakIsLowerBound)}</dd>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3 text-center">
-              <div className="text-xs text-slate-500 mb-1">Dominant</div>
-              <div className="text-lg font-bold text-slate-700">{summary.dominantPollutants.join(', ') || '—'}</div>
-              <div className="text-xs text-slate-500">Pollutant</div>
+            <div className="rounded-lg bg-slate-50 p-3">
+              <dt className="text-xs text-slate-500">Dominant pollutant</dt>
+              <dd className="text-lg font-semibold text-slate-800">{s.dominantPollutants.join(', ') || '—'}</dd>
             </div>
-            <div className="bg-slate-50 rounded-lg p-3 text-center">
-              <div className="text-xs text-slate-500 mb-1">Season</div>
-              <div className="text-lg font-bold text-slate-700">{summary.season}</div>
-              <div className="text-xs text-slate-500">IMD convention</div>
+            <div className="rounded-lg bg-slate-50 p-3">
+              <dt className="text-xs text-slate-500">Season (IMD convention)</dt>
+              <dd className="text-lg font-semibold text-slate-800">{s.season}</dd>
             </div>
-          </div>
-        </div>
+          </dl>
+        </Section>
 
-        {/* Current situation */}
-        <div className="px-6 py-5 border-b border-slate-100 avoid-break">
-          <h4 className="text-sm font-semibold text-slate-800 mb-2">2. Current situation</h4>
-          <p className="text-sm text-slate-600 leading-relaxed mb-3">{brief.currentSituation.overview}</p>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-            {Object.entries(brief.currentSituation.keyMetrics).map(([key, val]) => (
-              <div key={key} className="bg-slate-50 rounded p-2 text-center">
-                <div className="text-[10px] text-slate-500 font-medium">{POLLUTANT_LABELS[key] || key}</div>
-                <div className="text-sm font-semibold font-mono text-slate-700">{formatValue(val)}</div>
-              </div>
-            ))}
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1">{brief.currentSituation.keyMetricsNote}</p>
-          <ul className="mt-3 space-y-1">
-            {brief.currentSituation.weatherContext.map((w, i) => (
-              <li key={i} className="text-xs text-slate-500">{w}</li>
-            ))}
+        <Section n={2} title="Current situation">
+          <p className="text-sm text-slate-700 leading-relaxed">{brief.currentSituation.overview}</p>
+          <table className="data-table w-full text-xs mt-3">
+            <caption className="text-left text-xs text-slate-500 pb-1">{brief.currentSituation.keyMetricsNote}</caption>
+            <thead><tr>{Object.keys(brief.currentSituation.keyMetrics).map(k => <th key={k} scope="col">{POLLUTANT_LABELS[k] || k}</th>)}</tr></thead>
+            <tbody><tr>{Object.entries(brief.currentSituation.keyMetrics).map(([k, v]) => <td key={k} className="font-mono tabular">{formatValue(v, 1)}</td>)}</tr></tbody>
+          </table>
+          <ul className="mt-3 space-y-1 text-xs text-slate-600 list-disc pl-5">
+            {brief.currentSituation.weatherContext.map(w => <li key={w}>{w}</li>)}
           </ul>
-        </div>
+        </Section>
 
-        {/* Source context */}
-        <div className="px-6 py-5 border-b border-slate-100 avoid-break">
-          <h4 className="text-sm font-semibold text-slate-800 mb-2">3. Source context</h4>
-          <p className="text-xs text-slate-600 mb-3">{brief.sourceContext.disclaimer}</p>
-          <ul className="space-y-1">
+        <Section n={3} title="Source context (no apportionment)">
+          <p className="text-xs text-slate-600 mb-2">{brief.sourceContext.disclaimer}</p>
+          <ul className="space-y-1 text-xs text-slate-700 list-disc pl-5">
             {brief.sourceContext.indicators.map(ind => (
-              <li key={ind.id} className="text-xs text-slate-600">
+              <li key={ind.id}>
                 <strong>{ind.label}:</strong>{' '}
-                {ind.value === null ? 'unavailable' : Array.isArray(ind.value) ? ind.value.map(p => POLLUTANT_LABELS[p] || p).join(', ') : String(ind.value)}
+                {ind.value === null ? `unavailable — ${ind.unavailableReason}` : Array.isArray(ind.value) ? ind.value.map(p => POLLUTANT_LABELS[p] || p).join(', ') : String(ind.value)}
               </li>
             ))}
           </ul>
-        </div>
+        </Section>
 
-        {/* Forecast */}
-        <div className="px-6 py-5 border-b border-slate-100 avoid-break">
-          <h4 className="text-sm font-semibold text-slate-800 mb-2">4. Model forecast</h4>
-          <p className="text-sm text-slate-600">{brief.forecast.summary}</p>
+        <Section n={4} title="Model forecast">
+          <p className="text-sm text-slate-700">{brief.forecast.summary}</p>
           <p className="text-xs text-slate-500 mt-1">{brief.forecast.evaluationNote}</p>
-        </div>
+        </Section>
 
-        {/* Recommendations */}
-        <div className="px-6 py-5 border-b border-slate-100 avoid-break">
-          <h4 className="text-sm font-semibold text-slate-800 mb-3">5. Recommended actions</h4>
-          <div className="space-y-3">
-            {brief.recommendations.map((r, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
-                <div className={`mt-0.5 p-1 rounded ${r.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                  {r.priority === 'HIGH' ? <AlertTriangle size={14} /> : <CheckCircle size={14} />}
+        <Section n={5} title="Recommended actions and their basis">
+          <ol className="space-y-2">
+            {brief.recommendations.map(r => (
+              <li key={r.action} className="rounded-lg bg-slate-50 p-3">
+                <div className="flex items-start gap-2">
+                  <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-bold ${r.priority === 'HIGH' ? 'bg-orange-100 text-orange-800' : r.priority === 'MEDIUM' ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-700 border border-slate-200'}`}>{r.priority}</span>
+                  <span className="text-sm text-slate-800">{r.action}</span>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium text-slate-800">{r.action}</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold font-mono bg-slate-200 text-slate-700">{r.priority}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-1">Basis: {r.basis}</p>
-                </div>
-              </div>
+                <p className="text-xs text-slate-500 mt-1">Basis: {r.basis}</p>
+              </li>
             ))}
-          </div>
-        </div>
+          </ol>
+        </Section>
 
-        {/* Health statement and limitations */}
-        <div className="px-6 py-5">
-          <h4 className="text-sm font-semibold text-slate-800 mb-2">6. CPCB health statement</h4>
-          <p className="text-sm text-slate-600 mb-4 leading-relaxed">{brief.healthStatement ?? 'No category available — data insufficient.'}</p>
-          <h4 className="text-sm font-semibold text-slate-800 mb-2">7. Limitations</h4>
+        <Section n={6} title="CPCB health statement">
+          <p className="text-sm text-slate-700 leading-relaxed">{brief.healthStatement ?? 'No category available — data insufficient.'}</p>
+          <p className="text-xs text-slate-500 mt-1">CPCB National Air Quality Index (CUPS/82/2014-15), Table 3.12 — official guidance text, quoted.</p>
+        </Section>
+
+        <section className="px-6 py-5 avoid-break">
+          <h4 className="text-sm font-semibold text-slate-800 mb-2">7. Data basis and limitations</h4>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs text-slate-700 mb-3">
+            <div><dt className="inline text-slate-500">Air quality: </dt><dd className="inline">{prov.airQuality.model} ({prov.airQuality.kind}) via {prov.airQuality.provider === 'open-meteo' ? 'Open-Meteo (CC BY 4.0)' : prov.airQuality.provider}</dd></div>
+            <div><dt className="inline text-slate-500">Values for: </dt><dd className="inline">{formatCityTime(brief.dataBasis.referenceTime, tz)}</dd></div>
+            <div><dt className="inline text-slate-500">Retrieved: </dt><dd className="inline">{formatCityTime(prov.airQuality.retrievedAt, tz)}</dd></div>
+            <div><dt className="inline text-slate-500">Weather: </dt><dd className="inline">{weather ? `${weather.model} (${weather.kind})` : 'unavailable'}</dd></div>
+          </dl>
           <ul className="list-disc pl-5 space-y-1 text-xs text-slate-600">
-            {brief.limitations.map((l, i) => <li key={i}>{l}</li>)}
+            {brief.limitations.map(l => <li key={l}>{l}</li>)}
           </ul>
-          <p className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-500">{brief.methodology}</p>
-        </div>
-      </div>
+          <p className="pt-3 mt-3 border-t border-slate-100 text-xs text-slate-500">{brief.methodology}</p>
+          <p className="text-xs text-slate-500 mt-1">General information only; not medical or legal advice.</p>
+        </section>
+      </article>
     </div>
   );
 }

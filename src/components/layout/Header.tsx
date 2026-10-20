@@ -1,101 +1,86 @@
 import React from 'react';
-import { RefreshCw, Clock, Sun, Moon, PlayCircle } from 'lucide-react';
+import { RefreshCw, Sun, Moon, PlayCircle, Menu } from 'lucide-react';
 import type { City, AirQualityData } from '../../types';
-import { getAQIColor, getAQIColorLight, getAQILabel, timeAgo } from '../../utils/formatters';
-import { formatIndex } from '../../utils/provenance';
+import { formatIndex, formatCityTime } from '../../utils/provenance';
+import { useAqiColor } from '../../hooks/useTheme';
+import CitySelector from '../common/CitySelector';
+import CategoryBadge from '../common/CategoryBadge';
 import DataBasisBadge from '../common/DataBasisBadge';
 
 interface HeaderProps {
-  city: City | null;
+  cities: City[];
+  selectedCityId: string;
+  onSelectCity: (id: string) => void;
   airQuality: AirQualityData | null;
   loading: boolean;
   onRefresh: () => void;
-  lastUpdated: string | null;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
+  onOpenMenu: () => void;
   onStartIntro?: () => void;
 }
 
-export default function Header({ city, airQuality, loading, onRefresh, lastUpdated, theme, onToggleTheme, onStartIntro }: HeaderProps) {
-  const effectiveAqiColor = airQuality
-    ? (theme === 'dark' ? getAQIColorLight(airQuality.aqi) : getAQIColor(airQuality.aqi))
-    : undefined;
+/** City context shared by every view: which city, its current estimate, and when it is for. */
+export default function Header({
+  cities, selectedCityId, onSelectCity, airQuality, loading, onRefresh, theme, onToggleTheme, onOpenMenu, onStartIntro,
+}: HeaderProps) {
+  const aqiColor = useAqiColor();
+  const city = cities.find(c => c.id === selectedCityId);
 
   return (
-    <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        {city && (
-          <>
-            <div>
-              <h1 className="text-base font-semibold text-slate-900">{city.name}</h1>
-              <p className="text-xs text-slate-500">{city.state} • Pop: {city.population}</p>
-            </div>
-            {airQuality && effectiveAqiColor && (
-              <>
-                <div className="h-8 w-px bg-slate-200" />
-                <div className="flex items-center gap-3">
-                  <div className="text-center">
-                    <div
-                      className="text-2xl font-bold leading-none"
-                      style={{ color: effectiveAqiColor }}
-                    >
-                      {formatIndex(airQuality.aqi, airQuality.aqiIsLowerBound)}
-                    </div>
-                    <div className="text-[10px] font-medium text-slate-500 uppercase tracking-wider" title={airQuality.naqi.label}>
-                      NAQI est.
-                    </div>
-                  </div>
-                  <span
-                    className="px-2 py-0.5 rounded text-[11px] font-semibold"
-                    style={{
-                      backgroundColor: effectiveAqiColor + '15',
-                      color: effectiveAqiColor,
-                    }}
-                  >
-                    {getAQILabel(airQuality.aqi)}
-                  </span>
-                  <DataBasisBadge provenance={airQuality.provenance} className="hidden lg:inline-flex" />
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </div>
+    <header className="no-print bg-white border-b border-slate-200 px-3 md:px-6 py-2.5 flex items-center gap-2 md:gap-4 flex-wrap">
+      <button
+        type="button"
+        onClick={onOpenMenu}
+        className="md:hidden p-2 -ml-1 text-slate-600 hover:bg-slate-100 rounded-lg"
+        aria-label="Open navigation menu"
+      >
+        <Menu size={20} aria-hidden="true" />
+      </button>
 
-      <div className="flex items-center gap-3">
+      <CitySelector cities={cities} selectedId={selectedCityId} onSelect={onSelectCity} />
+
+      {airQuality && airQuality.cityId === selectedCityId && (
+        <div className="flex items-center gap-2 md:gap-3 min-w-0" role="group" aria-label={`${city?.name ?? ''} current NAQI-method estimate`}>
+          <span className="text-xl font-bold leading-none tabular" style={{ color: aqiColor(airQuality.aqi) }}>
+            {formatIndex(airQuality.aqi, airQuality.aqiIsLowerBound)}
+          </span>
+          <CategoryBadge index={airQuality.aqi} label={airQuality.aqiCategory} />
+          <span className="hidden sm:inline text-xs text-slate-500 whitespace-nowrap" title={airQuality.naqi.label}>
+            NAQI est. · {formatCityTime(airQuality.referenceTime, city?.timezone)}
+          </span>
+          <DataBasisBadge provenance={airQuality.provenance} className="hidden xl:inline-flex" />
+        </div>
+      )}
+
+      <div className="ml-auto flex items-center gap-1.5">
         {onStartIntro && (
           <button
+            type="button"
             onClick={onStartIntro}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            className="hidden lg:inline-flex btn text-slate-600 hover:bg-slate-100"
             aria-label="Play optional presentation intro"
           >
-            <PlayCircle size={14} />
-            Intro
+            <PlayCircle size={14} aria-hidden="true" /> Intro
           </button>
         )}
-        {/* Theme toggle */}
         <button
+          type="button"
           onClick={onToggleTheme}
-          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
         >
-          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          {theme === 'dark' ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
         </button>
-
-        {lastUpdated && (
-          <span className="text-xs text-slate-500 flex items-center gap-1.5">
-            <Clock size={12} />
-            {timeAgo(lastUpdated)}
-          </span>
-        )}
         <button
+          type="button"
           onClick={onRefresh}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
-          aria-label="Refresh air quality data"
+          className="btn-secondary"
+          aria-label="Reload air-quality data"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          {loading ? 'Updating...' : 'Refresh'}
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
+          <span className="hidden sm:inline">{loading ? 'Loading…' : 'Reload'}</span>
         </button>
       </div>
     </header>

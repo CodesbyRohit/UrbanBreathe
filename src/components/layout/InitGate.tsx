@@ -52,7 +52,7 @@ export default function InitGate({ onTap }: InitGateProps) {
       tabIndex={0}
       aria-label="Start presentation intro"
     >
-      <AmbientBackground variant="intro" />
+      <AmbientBackground />
 
       <div className="relative z-10 flex flex-col items-center">
         {/* Activation ring */}
@@ -74,13 +74,13 @@ export default function InitGate({ onTap }: InitGateProps) {
           <p className="text-sm text-brand-400 tracking-[0.15em]">
             [ START PRESENTATION INTRO ]
           </p>
-          <p className="text-[10px] text-slate-500 mt-4 tracking-wider animate-fade-in">
+          <p className="text-xs text-slate-500 mt-4 tracking-wider animate-fade-in">
             TAP ANYWHERE TO BEGIN
           </p>
         </div>
 
         {/* Bottom status */}
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 text-[10px] text-slate-700 font-mono tracking-wider animate-fade-in">
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs text-slate-700 font-mono tracking-wider animate-fade-in">
           <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
           OPTIONAL INTRO
         </div>

@@ -1,72 +1,38 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import type { City, AirQualityData } from '../types';
 import { getCities, getAirQuality } from '../services/api';
+import { useResource } from './useResource';
 
 export function useCities() {
-  const [cities, setCities] = useState<City[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    getCities(controller.signal)
-      .then(setCities)
-      .catch(err => {
-        if (err.name === 'AbortError') return;
-        setError(err.message);
-      })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, []);
-
-  return { cities, loading, error };
+  return useResource<City[]>('cities', getCities);
 }
 
-export function useAirQuality(city: City | null) {
-  const [data, setData] = useState<AirQualityData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  const latestCityRef = useRef<string | null>(null);
+export function useAirQuality(cityId: string | null) {
+  return useResource<AirQualityData>(cityId, signal => getAirQuality(cityId as string, signal));
+}
 
-  const refresh = useCallback(() => {
-    if (!city) return;
-
-    // Cancel any in-flight request from a previous city selection
-    if (abortRef.current) abortRef.current.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    latestCityRef.current = city.id;
-
-    setLoading(true);
-    setError(null);
-    getAirQuality(city.id, controller.signal)
-      .then(result => {
-        // Only update state if this is still the latest requested city
-        if (latestCityRef.current === city.id) {
-          setData(result);
-        }
-      })
-      .catch(err => {
-        if (err.name === 'AbortError') return;
-        if (latestCityRef.current === city.id) {
-          setError(err.message);
-        }
-      })
-      .finally(() => {
-        if (latestCityRef.current === city.id) {
-          setLoading(false);
-        }
-      });
-  }, [city]);
+/**
+ * Current estimates for every city, for the map and the comparison view.
+ * A city whose request fails is recorded as null ("no estimate") — never a
+ * substitute value. Requests are aborted on unmount or when the list changes.
+ */
+export function useAllCitiesAirQuality(cities: City[], reloadKey = 0) {
+  const [map, setMap] = useState<Record<string, AirQualityData | null>>({});
+  const ids = cities.map(c => c.id).join(',');
 
   useEffect(() => {
-    if (city) refresh();
-    return () => {
-      if (abortRef.current) abortRef.current.abort();
-    };
-  }, [city, refresh]);
+    if (!ids) return;
+    const controller = new AbortController();
+    ids.split(',').forEach(id => {
+      getAirQuality(id, controller.signal)
+        .then(data => { if (!controller.signal.aborted) setMap(prev => ({ ...prev, [id]: data })); })
+        .catch(err => {
+          if (controller.signal.aborted || err?.name === 'AbortError') return;
+          setMap(prev => ({ ...prev, [id]: prev[id] ?? null }));
+        });
+    });
+    return () => controller.abort();
+  }, [ids, reloadKey]);
 
-  return { data, loading, error, refresh };
+  return map;
 }

@@ -74,6 +74,23 @@ describe('sub-index (CPCB CUPS/82/2014-15 Table 3.11)', () => {
     assert.throws(() => subIndexFor('benzene', 1), /Unknown/);
   });
 
+  test('sub-index category follows the reported index; the concentration band is kept separately', () => {
+    // Regression: at a band's lower breakpoint, "subtract one from ILO" gives the
+    // previous category's top index. The card showed "Moderate" next to 100
+    // while the overall estimate for the same value said "Satisfactory".
+    const atEdge = subIndexFor('pm25', 61);
+    assert.equal(atEdge.subIndex, 100);
+    assert.equal(atEdge.category, 'Satisfactory');
+    assert.equal(atEdge.concentrationBand, 'Moderate');
+    const inside = subIndexFor('pm25', 62);
+    assert.equal(inside.category, 'Moderate');
+    assert.equal(inside.concentrationBand, 'Moderate');
+    for (const [p, c] of [['pm10', 101], ['no2', 181], ['co', 2.1], ['o3', 169], ['so2', 801]]) {
+      const r = subIndexFor(p, c);
+      assert.equal(r.category, categoryForIndex(r.subIndex), p);
+    }
+  });
+
   test('categories follow the CPCB index ranges', () => {
     assert.equal(categoryForIndex(50), 'Good');
     assert.equal(categoryForIndex(51), 'Satisfactory');

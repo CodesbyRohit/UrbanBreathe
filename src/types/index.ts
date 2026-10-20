@@ -5,9 +5,6 @@ export interface City {
   lat: number;
   lon: number;
   timezone: string;
-  population: string;
-  area: string;
-  description: string;
 }
 
 export type DataKind = 'modelled' | 'measured' | 'demo';
@@ -40,6 +37,9 @@ export interface SubIndex {
   subIndex: number | null;
   isLowerBound: boolean;
   category: string | null;
+  concentrationBand?: string | null;
+  windowStart?: string;
+  windowEnd?: string;
 }
 
 export interface NaqiResult {
@@ -120,6 +120,7 @@ export interface Season {
 
 export interface SourceContext {
   cityId: string;
+  referenceTime: string;
   status: 'indicators_only';
   disclaimer: string;
   indicators: SourceIndicator[];
@@ -147,11 +148,15 @@ export interface Forecast {
   model: string;
   naqiLabel: string;
   referenceTime: string;
-  issuedAt: string;
+  retrievedAt: string;
+  modelRunTime: string | null;
+  modelRunNote: string;
   horizonHours: number;
   evaluated: false;
   evaluationNote: string;
   naqiNote: string;
+  recentNote: string;
+  recent: ForecastPoint[];
   points: ForecastPoint[];
   peak: ForecastPoint | null;
   season: Season;
@@ -166,6 +171,30 @@ export interface Intervention {
   description: string;
   assumedReduction: Record<string, number>;
   assumptionNote?: string;
+}
+
+export interface ResolvedIntervention extends Intervention {
+  defaultReduction: Record<string, number>;
+  assumptionSource: 'placeholder-default' | 'user-edited';
+}
+
+/** User-edited reduction fractions keyed by intervention id, then pollutant. */
+export type ScenarioAssumptions = Record<string, Record<string, number>>;
+
+export interface ScenarioPollutant {
+  pollutant: string;
+  status: IndexStatus;
+  unit: string;
+  averagingHours: number;
+  reduction: number;
+  baselineAverage: number | null;
+  scenarioAverage: number | null;
+  baselineSubIndex: number | null;
+  scenarioSubIndex: number | null;
+  baselineIsLowerBound: boolean;
+  scenarioIsLowerBound: boolean;
+  baselineCategory: string | null;
+  scenarioCategory: string | null;
 }
 
 export interface SimulationResult {
@@ -184,10 +213,16 @@ export interface SimulationResult {
   aqiChange: number | null;
   baselinePM25: number | null;
   scenarioPM25: number | null;
+  baselineDominantPollutants: string[];
+  scenarioDominantPollutants: string[];
+  pollutants: ScenarioPollutant[];
   combinedReductions: Record<string, number>;
   combinationRule: string;
-  interventions: Intervention[];
+  calculationSteps: string[];
+  interventions: ResolvedIntervention[];
+  assumptionsEdited: boolean;
   assumptionNote: string;
+  referenceTime: string;
   provenance: Provenance;
   generatedAt: string;
 }
@@ -231,6 +266,7 @@ export interface ExecutiveBrief {
 
 export interface CitizenAdvisory {
   cityId: string;
+  referenceTime: string;
   status: IndexStatus;
   reasons: string[];
   aqi: number | null;
@@ -242,7 +278,8 @@ export interface CitizenAdvisory {
   healthStatementSource: string;
   healthAdvisory: string;
   lang: string;
-  message: string | null;
+  message: string;
+  messageLang: string;
   precautions: string[];
   sensitiveGroups: string[];
   multilingual: Record<string, string | null>;

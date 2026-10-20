@@ -1,29 +1,28 @@
 # UrbanBreathe
-> Air-quality decision-support prototype for Indian cities. It applies the CPCB National AQI method to modelled CAMS data (via Open-Meteo) and labels every value with its data basis. Built for the ET AI Hackathon 2.0 prototype.
+> Air-quality estimates for ten Indian cities. It applies the CPCB National AQI method to modelled CAMS data (via Open-Meteo) and labels every value with its source, time and data basis. Not an official CPCB station AQI.
 
-## Core Features
-- [Current Conditions](https://urban-breathe-nine.vercel.app/): NAQI-method estimate from modelled CAMS data (not an official CPCB station AQI), hourly PM2.5, PM10, NO₂, O₃, SO₂, CO in µg/m³, and modelled weather
-- [Source Context](https://urban-breathe-nine.vercel.app/): Descriptive indicators only — no source apportionment
-- [Model Forecast](https://urban-breathe-nine.vercel.app/): 72-hour CAMS model forecast with NAQI-method estimates; not evaluated against observations
-- [Scenario Explorer](https://urban-breathe-nine.vercel.app/): Illustrative arithmetic with uncited placeholder reductions; no health or cost estimates
-- [Executive Brief](https://urban-breathe-nine.vercel.app/): Printable situation summary with data basis and limitations
-- [Citizen Advisory](https://urban-breathe-nine.vercel.app/): CPCB health statements and general precautions (English, Hindi, Bengali, Telugu)
+## Views (single-page app; routes are #<view>/<city>)
+- [Current Conditions](https://urban-breathe-nine.vercel.app/#dashboard/delhi): NAQI-method estimate with per-pollutant means, valid hours and CPCB sub-indices; hourly PM2.5, PM10, NO₂, O₃, SO₂, CO (µg/m³); modelled weather
+- [Model Forecast](https://urban-breathe-nine.vercel.app/#forecast/delhi): past 24 h and next 72 h of the CAMS model; not evaluated against observations
+- [Source Context](https://urban-breathe-nine.vercel.app/#sources/delhi): descriptive indicators only — no source apportionment
+- [Scenario Explorer](https://urban-breathe-nine.vercel.app/#simulator/delhi): illustrative arithmetic with editable, labelled assumptions; no health or cost estimates
+- [City Comparison](https://urban-breathe-nine.vercel.app/#comparative/delhi): ranked estimates with timestamps; a screening view, not an enforcement priority
+- [Situation Brief](https://urban-breathe-nine.vercel.app/#brief/delhi): printable summary with data basis and limitations
+- [Citizen Advisory](https://urban-breathe-nine.vercel.app/#advisory/delhi): quoted CPCB health statement and general precautions (English, Hindi, Bengali, Telugu)
+- [Data & Method](https://urban-breathe-nine.vercel.app/#method/delhi): sources, calculation, breakpoints and limitations
 
 ## API Reference
-- GET /api/cities — List supported cities
-- GET /api/air-quality/:cityId — Current NAQI-method estimate, hourly concentrations and modelled weather
-- GET /api/sources/:cityId — Source context indicators (no apportionment)
-- GET /api/forecast/:cityId — 72-hour model forecast
-- GET /api/simulation/interventions — Intervention catalogue with placeholder assumptions
-- POST /api/simulation/run — Illustrative scenario
-- POST /api/brief/generate — Situation brief
-- GET /api/advisory/:cityId?lang=en|hi|bn|te — Citizen advisory
-- GET /api/health — Server health check
+- GET /api/cities — supported cities
+- GET /api/air-quality/:cityId — current NAQI-method estimate, sub-indices, hourly values, provenance
+- GET /api/forecast/:cityId — recent 24 h and 72 h model forecast
+- GET /api/sources/:cityId — source context indicators (no apportionment)
+- GET /api/simulation/interventions — intervention catalogue with placeholder assumptions
+- POST /api/simulation/run — illustrative scenario; optional user-edited assumptions
+- POST /api/brief/generate — situation brief
+- GET /api/advisory/:cityId?lang=en|hi|bn|te — citizen advisory
+- GET /api/health — server health check
 
 ## Data
 - [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api): CAMS global model output (CC BY 4.0, free for non-commercial use)
-- Demo fixtures: illustrative values used only when the server runs with DATA_MODE=demo, always labelled DEMO
-- Method: CPCB National Air Quality Index (CUPS/82/2014-15); see docs/methodology/naqi.md
-
-## Technology
-- React 18, TypeScript, Vite, Tailwind CSS 3.4, Express.js, Recharts, Lucide Icons
+- Demo fixtures: used only when the server runs with DATA_MODE=demo, always labelled DEMO
+- Method: CPCB National Air Quality Index (CUPS/82/2014-15); see docs/methodology/naqi.md in the repository
