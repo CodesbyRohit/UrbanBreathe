@@ -58,7 +58,69 @@ test('scenario re-applies the NAQI method to reduced live means (hand-computed)'
   assert.equal(body.scenarioAQI, 100);
   assert.equal(body.aqiChange, -34);
   assert.equal(body.baselinePM25, 63.3);
-  assert.equal(body.scenarioPM25, 44.56);
+  // Displayed with the same precision as the baseline mean (was 44.56 vs 63.3).
+  assert.equal(body.scenarioPM25, 44.6);
+});
+
+test('per-pollutant breakdown matches the overall result and the NAQI table', async () => {
+  useValues(DELHI_CAMS_SAMPLE);
+  const body = await run(['construction_ban', 'odd_even']);
+  const byKey = Object.fromEntries(body.pollutants.map(p => [p.pollutant, p]));
+  assert.equal(byKey.pm10.baselineSubIndex, 134);
+  assert.equal(byKey.pm10.scenarioSubIndex, 99);
+  assert.equal(byKey.pm10.reduction, 0.35);
+  assert.equal(byKey.o3.reduction, 0);
+  assert.equal(byKey.o3.scenarioSubIndex, byKey.o3.baselineSubIndex);
+  assert.equal(Math.max(...body.pollutants.map(p => p.scenarioSubIndex)), body.scenarioAQI);
+  assert.deepEqual(body.scenarioDominantPollutants, ['o3']);
+  assert.ok(body.calculationSteps.length >= 3);
+  assert.equal(body.assumptionsEdited, false);
+  assert.ok(body.interventions.every(iv => iv.assumptionSource === 'placeholder-default'));
+});
+
+const runWith = async payload => api(srv.baseUrl, '/api/simulation/run', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ cityId: 'delhi', ...payload }),
+});
+
+test('user-edited assumptions replace the placeholder map and are labelled', async () => {
+  useValues(DELHI_CAMS_SAMPLE);
+  const res = await runWith({ interventions: ['dust_suppression'], assumptions: { dust_suppression: { pm10: 0.5 } } });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.deepEqual(body.combinedReductions, { pm10: 0.5 }); // pm25 default dropped
+  assert.equal(body.assumptionsEdited, true);
+  assert.equal(body.interventions[0].assumptionSource, 'user-edited');
+  assert.deepEqual(body.interventions[0].defaultReduction, { pm10: 0.25, pm25: 0.1 });
+  assert.match(body.assumptionNote, /edited by the user/);
+});
+
+test('zero reductions leave the estimate unchanged', async () => {
+  useValues(DELHI_CAMS_SAMPLE);
+  const body = await (await runWith({ interventions: ['dust_suppression'], assumptions: { dust_suppression: { pm10: 0, pm25: 0 } } })).json();
+  assert.equal(body.scenarioAQI, body.baselineAQI);
+  assert.equal(body.aqiChange, 0);
+});
+
+test('invalid assumptions are rejected with 400 before any upstream call', async () => {
+  useValues(DELHI_CAMS_SAMPLE);
+  const cases = [
+    { interventions: ['dust_suppression'], assumptions: [] },
+    { interventions: ['dust_suppression'], assumptions: { odd_even: { pm10: 0.1 } } }, // not selected
+    { interventions: ['dust_suppression'], assumptions: { dust_suppression: { benzene: 0.1 } } },
+    { interventions: ['dust_suppression'], assumptions: { dust_suppression: { pm10: -0.1 } } },
+    { interventions: ['dust_suppression'], assumptions: { dust_suppression: { pm10: 1 } } },
+    { interventions: ['dust_suppression'], assumptions: { dust_suppression: { pm10: '0.2' } } },
+    { interventions: ['dust_suppression'], assumptions: { dust_suppression: 0.2 } },
+    { interventions: ['dust_suppression'], assumptions: JSON.parse('{"__proto__": {"pm10": 0.1}}') },
+  ];
+  for (const payload of cases) {
+    const res = await runWith(payload);
+    assert.equal(res.status, 400, JSON.stringify(payload));
+    assert.equal((await res.json()).error.code, 'INVALID_ASSUMPTIONS');
+  }
+  assert.equal(stub.calls.length, 0);
 });
 
 test('combined reductions never exceed 100%', () => {

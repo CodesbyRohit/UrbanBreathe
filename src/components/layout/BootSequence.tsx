@@ -136,13 +136,13 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
       aria-label="Optional presentation intro"
     >
       {/* Background */}
-      <AmbientBackground variant="intro" />
+      <AmbientBackground />
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center w-full max-w-lg px-6" onClick={(e) => e.stopPropagation()}>
         {/* Progress bar */}
         <div className="w-full mb-10">
-          <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 mb-2">
+          <div className="flex items-center justify-between text-xs font-mono text-slate-500 mb-2">
             <span>PRESENTATION INTRO</span>
             <span>{Math.round(progress)}%</span>
           </div>
@@ -193,7 +193,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
                 </div>
                 <span
                   className={`
-                    text-[10px] font-mono tracking-wider
+                    text-xs font-mono tracking-wider
                     transition-all duration-300
                     ${isCompleted ? 'text-teal-400' : isActive ? 'text-brand-400' : 'text-slate-700'}
                   `}
@@ -211,7 +211,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
             <button
               onClick={(e) => { e.stopPropagation(); toggleVoice(); }}
               className={`
-                flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-mono
+                flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono
                 transition-all duration-200 backdrop-blur-sm
                 ${voiceMuted
                   ? 'text-slate-600 hover:text-slate-400 bg-slate-900/50'
@@ -227,7 +227,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
 
           <button
             onClick={(e) => { e.stopPropagation(); handleSkip(); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-mono text-slate-600 hover:text-slate-400 bg-slate-900/50 hover:bg-slate-800/50 transition-all duration-200 backdrop-blur-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono text-slate-600 hover:text-slate-400 bg-slate-900/50 hover:bg-slate-800/50 transition-all duration-200 backdrop-blur-sm"
             aria-label="Skip boot sequence"
           >
             <SkipForward size={12} />

@@ -68,3 +68,34 @@ export function validateInterventionIds(value, knownIds, { min = 1, max = 8 } = 
   }
   return value;
 }
+
+const isPlainObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/**
+ * Optional user-edited reduction fractions:
+ *   { [interventionId]: { [pollutant]: fraction } }
+ * Each entry replaces the placeholder map for that intervention. Ids must be
+ * among the selected interventions, pollutants among `pollutants`, and each
+ * fraction a number in [0, maxReduction].
+ */
+export function validateAssumptions(value, selectedIds, pollutants, maxReduction) {
+  if (value === undefined) return {};
+  const invalid = message => badRequest('INVALID_ASSUMPTIONS', message);
+  if (!isPlainObject(value)) throw invalid('assumptions must be an object keyed by intervention id.');
+  const out = {};
+  for (const [id, reductions] of Object.entries(value)) {
+    if (!selectedIds.includes(id)) throw invalid(`assumptions for "${String(id).slice(0, 40)}" do not match a selected intervention.`);
+    if (!isPlainObject(reductions)) throw invalid(`assumptions.${id} must be an object of pollutant fractions.`);
+    const entries = Object.entries(reductions);
+    if (entries.length > pollutants.length) throw invalid(`assumptions.${id} has too many entries.`);
+    out[id] = {};
+    for (const [p, r] of entries) {
+      if (!pollutants.includes(p)) throw invalid(`assumptions.${id}: unsupported pollutant "${String(p).slice(0, 20)}".`);
+      if (typeof r !== 'number' || !Number.isFinite(r) || r < 0 || r > maxReduction) {
+        throw invalid(`assumptions.${id}.${p} must be a number between 0 and ${maxReduction}.`);
+      }
+      out[id][p] = r;
+    }
+  }
+  return out;
+}

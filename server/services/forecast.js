@@ -17,24 +17,35 @@ export const FORECAST_EVALUATION_NOTE =
 export const FORECAST_NAQI_NOTE =
   'Each point applies the CPCB NAQI method to running averages ending at that hour; windows near the start mix modelled recent hours with forecast hours.';
 
-export function buildForecast(ctx, { horizonHours = 72 } = {}) {
+export const RECENT_NOTE =
+  'Recent hours are the same CAMS model series for the past 24 hours (model output, not station observations).';
+
+export const MODEL_RUN_NOTE =
+  'Open-Meteo does not report which CAMS model run produced these values, so only the retrieval time is shown.';
+
+function pointAt(ctx, time, i, hoursAhead) {
+  const naqi = computeNaqi(ctx.input, time);
+  return {
+    time,
+    hoursAhead,
+    pm25: ctx.aq.series.pm25[i],
+    pm10: ctx.aq.series.pm10[i],
+    naqi: naqi.value,
+    naqiStatus: naqi.status,
+    naqiIsLowerBound: naqi.isLowerBound,
+    category: naqi.category,
+    dominantPollutants: naqi.dominantPollutants,
+  };
+}
+
+export function buildForecast(ctx, { horizonHours = 72, recentHours = 24 } = {}) {
   const refMs = Date.parse(ctx.referenceTime);
   const points = [];
+  const recent = [];
   ctx.aq.times.forEach((time, i) => {
     const hoursAhead = Math.round((Date.parse(time) - refMs) / HOUR_MS);
-    if (hoursAhead < 1 || hoursAhead > horizonHours) return;
-    const naqi = computeNaqi(ctx.input, time);
-    points.push({
-      time,
-      hoursAhead,
-      pm25: ctx.aq.series.pm25[i],
-      pm10: ctx.aq.series.pm10[i],
-      naqi: naqi.value,
-      naqiStatus: naqi.status,
-      naqiIsLowerBound: naqi.isLowerBound,
-      category: naqi.category,
-      dominantPollutants: naqi.dominantPollutants,
-    });
+    if (hoursAhead > -recentHours && hoursAhead <= 0) recent.push(pointAt(ctx, time, i, hoursAhead));
+    else if (hoursAhead >= 1 && hoursAhead <= horizonHours) points.push(pointAt(ctx, time, i, hoursAhead));
   });
 
   const withValue = points.filter(p => p.naqi !== null);
@@ -49,11 +60,15 @@ export function buildForecast(ctx, { horizonHours = 72 } = {}) {
     model: ctx.aq.source.model,
     naqiLabel: NAQI_LABELS[kind],
     referenceTime: ctx.referenceTime,
-    issuedAt: ctx.aq.retrievedAt,
+    retrievedAt: ctx.aq.retrievedAt,
+    modelRunTime: null,
+    modelRunNote: MODEL_RUN_NOTE,
     horizonHours,
     evaluated: false,
     evaluationNote: FORECAST_EVALUATION_NOTE,
     naqiNote: FORECAST_NAQI_NOTE,
+    recentNote: RECENT_NOTE,
+    recent,
     points,
     peak,
     season: getIndiaSeason(ctx.now, ctx.city.timezone),

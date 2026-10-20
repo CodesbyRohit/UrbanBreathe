@@ -57,6 +57,34 @@ and what remains uncertain.
 6. **Gas unit conversion.** ppb/ppm conversions use 25 °C and 1 atm
    (24.45 L/mol). The reference conditions CPCB assumes were not confirmed. No
    current data provider requires this conversion (Open-Meteo reports µg/m³).
+7. **Category at a band's lower breakpoint.** Because of the "subtract one"
+   rule, a concentration exactly at a band's lower breakpoint maps to the top
+   index of the previous category (PM2.5 61 µg/m³ → 100). The reported
+   category follows the index (Satisfactory), consistent with how the overall
+   AQI is categorised; the Table 3.11 concentration row (Moderate) is kept as
+   `concentrationBand`. Earlier versions labelled the sub-index by its
+   concentration row, so a pollutant card could say "Moderate" next to an
+   index of 100 while the overall estimate for the same value said
+   "Satisfactory". Regression test: `tests/server/naqi.test.js`.
+
+## Freshness and caching
+
+- `referenceTime` is the latest model hour at or before the request time (UTC);
+  all means end at that hour.
+- `retrievedAt` is when the server fetched the series from Open-Meteo. It is
+  preserved for cached responses (server cache: 10 minutes per instance), so a
+  cached value is never presented as newly retrieved.
+- Open-Meteo does not report which CAMS model run produced the values; the API
+  returns `modelRunTime: null` rather than presenting the retrieval time as an
+  issue time.
+
+## Forecast evaluation (not yet done)
+
+No accuracy is claimed. A defensible evaluation would need hourly CPCB CAAQMS
+observations for the same cities and period (subject to their terms of use), a
+time-ordered hold-out with no future information, a persistence baseline, and
+errors reported per lead time (e.g. MAE of the index and category hit rate),
+with station-to-grid representativeness discussed explicitly.
 
 ## Modelled data is not an official AQI
 

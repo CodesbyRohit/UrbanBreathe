@@ -65,3 +65,13 @@ test('insufficient data -> no category, no precautions, explicit message', async
   assert.deepEqual(body.precautions, []);
   assert.match(body.healthAdvisory, /Not enough valid data/);
 });
+
+test('untranslated message falls back to English and says so (was null)', async () => {
+  useValues({ ...DELHI_CAMS_SAMPLE, pm2_5: null, pm10: null });
+  const body = await getAdvisory('?lang=te');
+  assert.match(body.message, /Not enough valid data/);
+  assert.equal(body.messageLang, 'en');
+  useValues(DELHI_CAMS_SAMPLE);
+  clearProviderCache();
+  assert.equal((await getAdvisory('?lang=te')).messageLang, 'te');
+});

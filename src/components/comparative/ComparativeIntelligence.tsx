@@ -1,160 +1,165 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { TrendingUp, ArrowUpDown } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid, LabelList } from 'recharts';
+import { BarChart3 } from 'lucide-react';
 import type { City, AirQualityData, Forecast } from '../../types';
-import { getAQIColor, getAQILabel } from '../../utils/formatters';
-import { formatIndex } from '../../utils/provenance';
+import { useAqiColor } from '../../hooks/useTheme';
+import { formatIndex, formatCityTime } from '../../utils/provenance';
 import { getForecast } from '../../services/api';
-import { POLLUTANT_LABELS } from '../../utils/constants';
+import { pollutantList } from '../../utils/constants';
+import { rankCities, type RankSort } from '../../utils/ranking';
+import PageHeader from '../common/PageHeader';
+import CategoryBadge from '../common/CategoryBadge';
+import IndiaMap from '../common/IndiaMap';
+import Notice from '../common/Notice';
 
 interface ComparativeIntelligenceProps {
   cities: City[];
   airQualityMap: Record<string, AirQualityData | null>;
+  selectedId: string;
+  onSelectCity: (id: string) => void;
 }
 
-interface CityComparison {
+interface Row {
   cityId: string;
   cityName: string;
-  cityState: string;
   aqi: number | null;
   isLowerBound: boolean;
-  aqiColor: string;
+  category: string | null;
   dominant: string;
+  referenceTime: string | null;
+  status: 'loading' | 'unavailable' | 'insufficient' | 'ok';
   isDemo: boolean;
-  forecastPeak: number | null;
-  forecastPeakIsLowerBound: boolean;
+  peak: Forecast['peak'] | undefined;
 }
 
-type SortKey = 'aqi_desc' | 'aqi_asc' | 'name';
+const SORTS: { key: RankSort; label: string }[] = [
+  { key: 'aqi_desc', label: 'Highest first' },
+  { key: 'aqi_asc', label: 'Lowest first' },
+  { key: 'name', label: 'City name' },
+];
 
-const byAqi = (dir: 1 | -1) => (a: CityComparison, b: CityComparison) => {
-  if (a.aqi === null && b.aqi === null) return a.cityName.localeCompare(b.cityName);
-  if (a.aqi === null) return 1;
-  if (b.aqi === null) return -1;
-  return dir * (a.aqi - b.aqi);
-};
+export default function ComparativeIntelligence({ cities, airQualityMap, selectedId, onSelectCity }: ComparativeIntelligenceProps) {
+  const aqiColor = useAqiColor();
+  const [sort, setSort] = useState<RankSort>('aqi_desc');
+  const [peaks, setPeaks] = useState<Record<string, Forecast['peak'] | null>>({});
 
-export default function ComparativeIntelligence({ cities, airQualityMap }: ComparativeIntelligenceProps) {
-  const [forecasts, setForecasts] = useState<Record<string, Forecast | null>>({});
-  const [sortKey, setSortKey] = useState<SortKey>('aqi_desc');
-
+  // Forecast peaks per city. The server shares the cached provider response
+  // with the air-quality request, so this adds no upstream calls.
   useEffect(() => {
-    if (cities.length === 0) return;
-    Promise.allSettled(cities.map(c => getForecast(c.id).then(d => ({ id: c.id, data: d })))).then(results => {
-      const map: Record<string, Forecast | null> = {};
-      results.forEach(r => { if (r.status === 'fulfilled') map[r.value.id] = r.value.data; });
-      setForecasts(map);
+    const controller = new AbortController();
+    cities.forEach(c => {
+      getForecast(c.id, controller.signal)
+        .then(f => setPeaks(prev => ({ ...prev, [c.id]: f.peak })))
+        .catch(err => { if (err?.name !== 'AbortError') setPeaks(prev => ({ ...prev, [c.id]: null })); });
     });
+    return () => controller.abort();
   }, [cities]);
 
-  const comparisons = useMemo((): CityComparison[] => {
-    return cities
-      .map(city => {
-        const aq = airQualityMap[city.id];
-        const fc = forecasts[city.id];
-        return {
-          cityId: city.id,
-          cityName: city.name,
-          cityState: city.state,
-          aqi: aq?.aqi ?? null,
-          isLowerBound: aq?.aqiIsLowerBound ?? false,
-          aqiColor: getAQIColor(aq?.aqi ?? null),
-          dominant: aq ? aq.naqi.dominantPollutants.map(p => POLLUTANT_LABELS[p] || p).join(', ') : '',
-          isDemo: aq?.provenance.mode === 'demo',
-          forecastPeak: fc?.peak?.naqi ?? null,
-          forecastPeakIsLowerBound: fc?.peak?.naqiIsLowerBound ?? false,
-        };
-      })
-      .sort(sortKey === 'name' ? (a, b) => a.cityName.localeCompare(b.cityName) : byAqi(sortKey === 'aqi_desc' ? -1 : 1));
-  }, [cities, airQualityMap, forecasts, sortKey]);
+  const rows = useMemo((): Row[] => rankCities(cities.map(city => {
+    const aq = airQualityMap[city.id];
+    return {
+      cityId: city.id,
+      cityName: city.name,
+      aqi: aq?.aqi ?? null,
+      isLowerBound: aq?.aqiIsLowerBound ?? false,
+      category: aq?.aqiCategory ?? null,
+      dominant: aq ? pollutantList(aq.naqi.dominantPollutants) : '',
+      referenceTime: aq?.referenceTime ?? null,
+      status: aq === undefined ? 'loading' : aq === null ? 'unavailable' : aq.aqiStatus === 'ok' ? 'ok' : 'insufficient',
+      isDemo: aq?.provenance.mode === 'demo',
+      peak: peaks[city.id] === undefined ? undefined : peaks[city.id],
+    };
+  }), sort), [cities, airQualityMap, peaks, sort]);
 
-  const chartData = comparisons.filter(c => c.aqi !== null).map(c => ({ name: c.cityName, value: c.aqi, fill: c.aqiColor }));
-
-  const sortOptions: { key: SortKey; label: string }[] = [
-    { key: 'aqi_desc', label: 'Highest estimate' },
-    { key: 'aqi_asc', label: 'Lowest estimate' },
-    { key: 'name', label: 'City name' },
-  ];
+  const refTimes = [...new Set(rows.map(r => r.referenceTime).filter(Boolean))] as string[];
+  const chartData = rows.filter(r => r.aqi !== null).map(r => ({ name: r.cityName, value: r.aqi as number, label: formatIndex(r.aqi, r.isLowerBound), category: r.category }));
+  const missing = rows.filter(r => r.status === 'unavailable' || r.status === 'insufficient');
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center">
-          <TrendingUp size={18} className="text-brand-600" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">City Comparison</h2>
-          <p className="text-sm text-slate-500">Current NAQI-method estimates and model-forecast peaks (modelled CAMS data)</p>
+    <div className="space-y-5">
+      <PageHeader icon={<BarChart3 size={18} />} title="City comparison" description="Current NAQI-method estimates from modelled CAMS data, ranked. A screening view, not an enforcement or inspection priority." />
+
+      <Notice>
+        Metric: CPCB NAQI method applied to 24-hour (8-hour for O₃, CO) means of CAMS model concentrations,{' '}
+        {refTimes.length === 1 ? <>all for <strong>{formatCityTime(refTimes[0])}</strong></> : refTimes.length > 1 ? 'for the hours shown in each row' : 'times shown when loaded'}.
+        Each value is a ~45 km grid-cell estimate around the city centre, not an official CPCB station AQI. Differences of a few points are within what the model cannot resolve.
+      </Notice>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-medium text-slate-600" id="sort-label">Order:</span>
+        <div className="segmented" role="group" aria-labelledby="sort-label">
+          {SORTS.map(s => (
+            <button key={s.key} type="button" aria-pressed={sort === s.key} onClick={() => setSort(s.key)}>{s.label}</button>
+          ))}
         </div>
       </div>
 
-      <div className="flex items-center flex-wrap gap-2">
-        <ArrowUpDown size={14} className="text-slate-400" />
-        <span className="text-xs font-medium text-slate-500">Sort:</span>
-        {sortOptions.map(opt => (
-          <button
-            key={opt.key}
-            onClick={() => setSortKey(opt.key)}
-            aria-pressed={sortKey === opt.key}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-150 ${
-              sortKey === opt.key ? 'bg-brand-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
+      <section className="panel" aria-labelledby="compare-table-heading">
+        <h3 id="compare-table-heading" className="sr-only">Cities ranked by NAQI-method estimate</h3>
+        <div className="overflow-x-auto">
+          <table className="data-table w-full min-w-[720px] text-sm">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th scope="col" className="w-10">#</th>
+                <th scope="col">City</th>
+                <th scope="col" className="!text-right">NAQI est.</th>
+                <th scope="col">Category</th>
+                <th scope="col">Dominant</th>
+                <th scope="col">Values for</th>
+                <th scope="col" className="!text-right">72-h model peak</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.cityId} className={r.cityId === selectedId ? 'bg-brand-50' : ''}>
+                  <td className="tabular text-slate-500">{r.aqi !== null && sort !== 'name' ? i + 1 : '—'}</td>
+                  <th scope="row" className="!normal-case !text-sm !tracking-normal">
+                    <button type="button" onClick={() => onSelectCity(r.cityId)} className="font-semibold text-slate-800 hover:text-brand-700 underline-offset-2 hover:underline" aria-pressed={r.cityId === selectedId}>
+                      {r.cityName}
+                    </button>
+                    {r.isDemo && <span className="ml-1.5 text-xs font-semibold text-amber-900 bg-amber-100 px-1 rounded">DEMO</span>}
+                  </th>
+                  <td className="text-right font-mono font-semibold tabular" style={{ color: aqiColor(r.aqi) }}>{r.status === 'loading' ? '…' : formatIndex(r.aqi, r.isLowerBound)}</td>
+                  <td>
+                    {r.status === 'ok' && <CategoryBadge index={r.aqi} label={r.category} />}
+                    {r.status === 'loading' && <span className="text-xs text-slate-500">Loading…</span>}
+                    {r.status === 'unavailable' && <span className="text-xs text-amber-700">Data unavailable</span>}
+                    {r.status === 'insufficient' && <span className="text-xs text-amber-700">Insufficient data</span>}
+                  </td>
+                  <td className="text-xs text-slate-600">{r.dominant || '—'}</td>
+                  <td className="text-xs text-slate-600 whitespace-nowrap">{r.referenceTime ? formatCityTime(r.referenceTime) : '—'}</td>
+                  <td className="text-right font-mono tabular text-slate-700 whitespace-nowrap">
+                    {r.peak === undefined ? '…' : r.peak === null ? '--' : `${formatIndex(r.peak.naqi, r.peak.naqiIsLowerBound)} (+${r.peak.hoursAhead} h)`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {comparisons.map(c => (
-          <div key={c.cityId} className="bg-white rounded-xl border border-slate-200 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900">{c.cityName}</h3>
-                <p className="text-[10px] text-slate-500">{c.cityState}</p>
-              </div>
-              {c.isDemo && <span className="text-[10px] font-semibold text-amber-900 bg-amber-100 px-1.5 rounded">DEMO</span>}
-            </div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-2xl font-bold font-mono" style={{ color: c.aqiColor }}>{formatIndex(c.aqi, c.isLowerBound)}</span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: c.aqiColor + '18', color: c.aqiColor }}>
-                {getAQILabel(c.aqi)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-slate-100 pt-2 mt-1">
-              <span>Dominant pollutant: <span className="font-medium text-slate-700">{c.dominant || '—'}</span></span>
-              <span>72-h model peak: <strong>{formatIndex(c.forecastPeak, c.forecastPeakIsLowerBound)}</strong></span>
-            </div>
+      <div className="space-y-5">
+        <section className="panel p-5" aria-labelledby="compare-chart-heading">
+          <h3 id="compare-chart-heading" className="text-sm font-semibold text-slate-700 mb-3">NAQI-method estimate by city</h3>
+          <div aria-hidden="true">
+            <ResponsiveContainer width="100%" height={Math.max(200, chartData.length * 30 + 40)}>
+              <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" domain={[0, 'auto']} tick={{ fontSize: 11 }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+                <Tooltip formatter={(_v, _n, item) => [`${item.payload.label} (${item.payload.category})`, 'NAQI est.']} />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+                  {chartData.map(entry => <Cell key={entry.name} fill={aqiColor(entry.value)} />)}
+                  <LabelList dataKey="label" position="right" fontSize={11} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        ))}
-      </div>
-
-      <div className="bg-white rounded-xl border border-slate-200 p-5">
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">NAQI-method estimate by city</h3>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={chartData} margin={{ left: -10, bottom: 5 }}>
-            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#475569' }} />
-            <YAxis tick={{ fontSize: 10, fill: '#475569' }} />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0].payload;
-                return (
-                  <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-xs">
-                    <p className="font-semibold text-slate-900">{d.name}</p>
-                    <p className="text-slate-600">NAQI estimate: <strong>{d.value}</strong> ({getAQILabel(d.value)})</p>
-                  </div>
-                );
-              }}
-            />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-              {chartData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-        <p className="text-[11px] text-slate-500 mt-3 text-center">
-          Bars show NAQI-method estimates from modelled CAMS data, not official CPCB station AQI. Cities without a valid estimate are omitted from the chart.
-        </p>
+          <p className="text-xs text-slate-500 mt-2">
+            The table above holds the same values. {missing.length ? `Not shown (no valid estimate): ${missing.map(m => m.cityName).join(', ')}.` : ''}
+          </p>
+        </section>
+        <IndiaMap cities={cities} selectedId={selectedId} airQualityMap={airQualityMap} onSelect={onSelectCity} />
       </div>
     </div>
   );

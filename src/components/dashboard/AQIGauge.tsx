@@ -1,146 +1,40 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, Shield, CheckCircle, AlertCircle, Skull, Smile } from 'lucide-react';
+import React from 'react';
+import { useAqiColor } from '../../hooks/useTheme';
 
 interface AQIGaugeProps {
   aqi: number | null;
   isLowerBound?: boolean;
-  label: string;
-  color: string;
-  size?: 'sm' | 'md' | 'lg';
-  prevAqi?: number | null;
 }
 
-function getSeverityIcon(aqi: number | null): React.ReactNode {
-  if (aqi === null) return <AlertCircle size={14} className="text-slate-500" />;
-  if (aqi <= 50) return <Smile size={14} className="text-green-700" />;
-  if (aqi <= 100) return <CheckCircle size={14} className="text-lime-700" />;
-  if (aqi <= 200) return <AlertCircle size={14} className="text-yellow-700" />;
-  if (aqi <= 300) return <AlertTriangle size={14} className="text-orange-700" />;
-  if (aqi <= 400) return <AlertTriangle size={14} className="text-red-700" />;
-  return <Skull size={14} className="text-purple-700" />;
-}
+const RADIUS = 54;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-function getSeverityPattern(aqi: number | null): string {
-  if (aqi === null) return '';
-  if (aqi <= 50) return '';
-  if (aqi <= 100) return '';
-  if (aqi <= 200) return 'diagonal-stripes';
-  if (aqi <= 300) return 'diagonal-stripes';
-  if (aqi <= 400) return 'cross-hatch';
-  return 'cross-hatch';
-}
-
-export default function AQIGauge({ aqi, isLowerBound = false, label, color, size = 'md', prevAqi }: AQIGaugeProps) {
-  // Animation target and start (0 ring when no estimate is available)
+/**
+ * Ring showing the index on the 0–500 CPCB scale. Static (no count-up
+ * animation); the value is exposed once as text for assistive technology.
+ */
+export default function AQIGauge({ aqi, isLowerBound = false }: AQIGaugeProps) {
+  const aqiColor = useAqiColor();
   const hasValue = aqi !== null && Number.isFinite(aqi);
-  const targetAqi = hasValue ? Math.max(0, Math.round(aqi as number)) : 0;
-  const startAqi = prevAqi != null ? Math.max(0, Math.round(prevAqi)) : targetAqi;
-
-  const [displayValue, setDisplayValue] = useState(startAqi);
-  const animationRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const start = startAqi;
-    const end = targetAqi;
-    const duration = 250;
-    const startTime = performance.now();
-
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // ease-out quad
-      const eased = 1 - Math.pow(1 - progress, 2);
-      const current = Math.round(start + (end - start) * eased);
-      setDisplayValue(current);
-      if (progress < 1) {
-        animationRef.current = requestAnimationFrame(animate);
-      }
-    };
-
-    animationRef.current = requestAnimationFrame(animate);
-    return () => {
-      if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
-    };
-  }, [targetAqi, startAqi]);
-
-  const normalized = Math.min(targetAqi, 500) / 500;
-  const circumference = 2 * Math.PI * 54;
-  const offset = circumference - normalized * circumference;
-
-  const dims = size === 'sm'
-    ? { svg: 100, stroke: 8, text: 'text-lg', sub: 'text-[10px]', badgeSize: 'text-[10px]' }
-    : size === 'lg'
-    ? { svg: 160, stroke: 14, text: 'text-3xl', sub: 'text-xs', badgeSize: 'text-xs' }
-    : { svg: 128, stroke: 10, text: 'text-2xl', sub: 'text-[11px]', badgeSize: 'text-[11px]' };
-
-  const pattern = getSeverityPattern(hasValue ? targetAqi : null);
-  const severityIcon = getSeverityIcon(hasValue ? targetAqi : null);
-  const shown = hasValue ? `${displayValue}${isLowerBound ? '+' : ''}` : '--';
+  const value = hasValue ? Math.max(0, Math.round(aqi as number)) : 0;
+  const offset = CIRCUMFERENCE - (Math.min(value, 500) / 500) * CIRCUMFERENCE;
+  const color = aqiColor(hasValue ? value : null);
+  const shown = hasValue ? `${value}${isLowerBound ? '+' : ''}` : '--';
 
   return (
-    <div className="flex flex-col items-center relative">
-      {/* Severity badge - visible from a distance */}
-      <div
-        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold mb-2 ${dims.badgeSize}`}
-        style={{
-          backgroundColor: color + '15',
-          color: color,
-          border: `1px solid ${color}30`,
-        }}
-        role="status"
-        aria-label={`Air quality: ${label}`}
-      >
-        {severityIcon}
-        <span>{label}</span>
-      </div>
-
-      <div className="relative">
-        <svg width={dims.svg} height={dims.svg} viewBox="0 0 128 128" className="transform -rotate-90">
-          {/* Background ring */}
+    <div className="relative w-36 h-36" role="img" aria-label={hasValue ? `NAQI-method estimate ${shown} on a 0 to 500 scale` : 'No NAQI-method estimate available'}>
+      <svg viewBox="0 0 128 128" className="w-full h-full -rotate-90" aria-hidden="true">
+        <circle cx="64" cy="64" r={RADIUS} fill="none" stroke="var(--chart-grid)" strokeWidth="10" />
+        {hasValue && (
           <circle
-            cx="64" cy="64" r="54"
-            fill="none"
-            stroke="#e2e8f0"
-            strokeWidth={dims.stroke}
+            cx="64" cy="64" r={RADIUS} fill="none" stroke={color} strokeWidth="10" strokeLinecap="round"
+            strokeDasharray={CIRCUMFERENCE} strokeDashoffset={offset}
           />
-          {/* Pattern overlay for color-blind accessibility */}
-          {pattern && (
-            <circle
-              cx="64" cy="64" r="54"
-              fill="none"
-              stroke={color}
-              strokeWidth={dims.stroke}
-              strokeDasharray={pattern === 'diagonal-stripes' ? '4 6' : '2 4'}
-              strokeLinecap="butt"
-              strokeDashoffset={offset}
-              opacity={0.4}
-            />
-          )}
-          {/* Foreground ring */}
-          <circle
-            cx="64" cy="64" r="54"
-            fill="none"
-            stroke={color}
-            strokeWidth={dims.stroke}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            className="transition-all duration-[250ms] ease-out"
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span
-            className={`font-bold font-mono ${dims.text}`}
-            style={{ color }}
-            aria-live="polite"
-            aria-label={hasValue ? `NAQI estimate ${shown}` : 'No NAQI estimate available'}
-          >
-            {shown}
-          </span>
-          <span className={`${dims.sub} font-semibold text-slate-500 uppercase tracking-wider`}>
-            NAQI est.
-          </span>
-        </div>
+        )}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
+        <span className="text-3xl font-bold tabular" style={{ color }}>{shown}</span>
+        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">NAQI est.</span>
       </div>
     </div>
   );

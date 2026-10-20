@@ -36,6 +36,7 @@ export function buildSourceContext(ctx) {
 
   return {
     cityId: ctx.city.id,
+    referenceTime: ctx.referenceTime,
     status: 'indicators_only',
     disclaimer: SOURCE_DISCLAIMER,
     indicators: [

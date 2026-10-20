@@ -82,6 +82,48 @@ describe('live CAMS data (D1, D2, D3 regressions)', () => {
     await getDelhi();
     assert.equal(stub.calls.filter(u => u.includes('air-quality-api')).length, 1);
   });
+
+  test('cached responses keep their original retrievedAt (freshness is not overstated)', async () => {
+    useUpstream(() => jsonResponse(airQualityResponse(DELHI_CAMS_SAMPLE)));
+    const first = await (await getDelhi()).json();
+    await new Promise(r => setTimeout(r, 20));
+    const second = await (await getDelhi()).json();
+    assert.equal(second.provenance.airQuality.retrievedAt, first.provenance.airQuality.retrievedAt);
+    assert.equal(second.provenance.weather.retrievedAt, first.provenance.weather.retrievedAt);
+  });
+
+  test('concurrent requests for one city share a single upstream call', async () => {
+    useUpstream(() => new Promise(resolve => setTimeout(() => resolve(jsonResponse(airQualityResponse(DELHI_CAMS_SAMPLE))), 30)));
+    const responses = await Promise.all([
+      getDelhi(),
+      api(srv.baseUrl, '/api/forecast/delhi'),
+      api(srv.baseUrl, '/api/advisory/delhi'),
+    ]);
+    assert.deepEqual(responses.map(r => r.status), [200, 200, 200]);
+    assert.equal(stub.calls.filter(u => u.includes('air-quality-api')).length, 1);
+    assert.equal(stub.calls.filter(u => u.includes('api.open-meteo.com/v1/forecast')).length, 1);
+  });
+
+  test('successful GETs are CDN-cacheable; errors are not', async () => {
+    useUpstream(() => jsonResponse(airQualityResponse(DELHI_CAMS_SAMPLE)));
+    const ok = await getDelhi();
+    // Browsers must revalidate (no stale-while-revalidate in Cache-Control,
+    // which made the header and the brief show different hours); only the CDN caches.
+    assert.equal(ok.headers.get('cache-control'), 'no-cache');
+    assert.match(ok.headers.get('vercel-cdn-cache-control'), /max-age=60/);
+    assert.equal(ok.headers.get('x-content-type-options'), 'nosniff');
+    const missing = await api(srv.baseUrl, '/api/air-quality/atlantis');
+    assert.equal(missing.status, 404);
+    assert.equal(missing.headers.get('cache-control'), 'no-store');
+    assert.equal(missing.headers.get('vercel-cdn-cache-control'), null);
+  });
+
+  test('CORS headers are not sent unless CORS_ORIGINS is configured', async () => {
+    useUpstream(() => jsonResponse(airQualityResponse(DELHI_CAMS_SAMPLE)));
+    const res = await api(srv.baseUrl, '/api/cities', { headers: { origin: 'https://evil.example' } });
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('access-control-allow-origin'), null);
+  });
 });
 
 describe('missing and insufficient pollutant data', () => {
@@ -151,6 +193,24 @@ describe('upstream failures never fall back to fixtures', () => {
     const started = Date.now();
     await expectUnavailable('timeout');
     assert.ok(Date.now() - started < 2000, 'request should fail fast after the timeout');
+  });
+
+  test('oversized upstream response -> 503, not parsed', async () => {
+    const original = upstreamConfig.maxResponseBytes;
+    upstreamConfig.maxResponseBytes = 1000;
+    try {
+      useUpstream(() => jsonResponse(airQualityResponse(DELHI_CAMS_SAMPLE)));
+      await expectUnavailable('response_too_large');
+    } finally {
+      upstreamConfig.maxResponseBytes = original;
+    }
+  });
+
+  test('rate-limited upstream -> Retry-After and no-store', async () => {
+    useUpstream(() => new Response('slow down', { status: 429 }));
+    const res = await getDelhi();
+    assert.equal(res.headers.get('retry-after'), '60');
+    assert.equal(res.headers.get('cache-control'), 'no-store');
   });
 
   test('invalid JSON -> 503', async () => {

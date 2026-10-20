@@ -1,269 +1,178 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import Sidebar from './Sidebar';
+// The default view is bundled eagerly (one fewer request before first data);
+// the other views load on demand.
+import LiveMonitoring from '../dashboard/LiveMonitoring';
 import Header from './Header';
-import CitySelector from '../common/CitySelector';
-import IndiaMap from '../common/IndiaMap';
 import BootSequence from './BootSequence';
 import InitGate from './InitGate';
-import ImpactSection from '../landing/ImpactSection';
-import AmbientBackground from './AmbientBackground';
-import { Menu, Loader, AlertTriangle } from 'lucide-react';
+import { Loader, AlertTriangle } from 'lucide-react';
 import type { NavSection } from '../../utils/constants';
-import { useCities, useAirQuality } from '../../hooks/useCityData';
-import { useTheme } from '../../hooks/useTheme';
-import { getAirQuality } from '../../services/api';
-import type { AirQualityData } from '../../types';
+import { NAV_SECTION_IDS } from '../../utils/constants';
+import { useCities, useAirQuality, useAllCitiesAirQuality } from '../../hooks/useCityData';
+import { useTheme, ThemeContext } from '../../hooks/useTheme';
+import { parseRoute, formatRoute } from '../../utils/route';
+import { ErrorPanel } from '../common/StateViews';
 
-const LiveMonitoring = lazy(() => import('../dashboard/LiveMonitoring'));
 const SourceAttribution = lazy(() => import('../source-attribution/SourceAttribution'));
 const PredictiveIntelligence = lazy(() => import('../forecast/PredictiveIntelligence'));
 const PolicySimulator = lazy(() => import('../simulator/PolicySimulator'));
-const EnforcementIntelligence = lazy(() => import('../enforcement/EnforcementIntelligence'));
 const ComparativeIntelligence = lazy(() => import('../comparative/ComparativeIntelligence'));
 const ExecutiveBrief = lazy(() => import('../executive-brief/ExecutiveBrief'));
 const CitizenAdvisory = lazy(() => import('../citizen-advisory/CitizenAdvisory'));
+const MethodPage = lazy(() => import('../method/MethodPage'));
+
+const DEFAULT_ROUTE = { section: 'dashboard', cityId: 'delhi' };
 
 function ModuleFallback() {
   return (
-    <div className="flex items-center justify-center h-96">
-      <div className="flex items-center gap-2 text-sm text-slate-400">
-        <Loader size={16} className="animate-spin" />
-        Loading module...
+    <div className="flex items-center justify-center h-64" role="status">
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <Loader size={16} className="animate-spin" aria-hidden="true" />
+        Loading view…
       </div>
     </div>
   );
 }
 
+function initialRoute() {
+  return typeof window === 'undefined' ? DEFAULT_ROUTE : parseRoute(window.location.hash, NAV_SECTION_IDS, DEFAULT_ROUTE);
+}
+
 export default function AppShell() {
-  const { cities } = useCities();
-  const [selectedCityId, setSelectedCityId] = useState<string>('delhi');
-  const [activeSection, setActiveSection] = useState<NavSection>('dashboard');
+  const cities = useCities();
+  const cityList = cities.data ?? [];
+  const [route, setRoute] = useState(initialRoute);
+  const activeSection = route.section as NavSection;
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   // The presentation intro (tap gate + boot sequence) is optional and off by
   // default; it can be started from the header.
   const [showInitGate, setShowInitGate] = useState(false);
   const [showBoot, setShowBoot] = useState(false);
-  const lastUpdatedRef = useRef<string | null>(null);
-  const { theme, toggleTheme, isDark } = useTheme();
+  const [mapReloadKey, setMapReloadKey] = useState(0);
+  const { theme, toggleTheme } = useTheme();
+  const mainRef = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
 
-  const selectedCity = cities.find(c => c.id === selectedCityId) || null;
-  const { data: airQuality, loading: aqLoading, error: aqError, refresh: refreshAQ } = useAirQuality(selectedCity);
+  // An unknown city in the URL falls back to the default once the list is known.
+  const selectedCity = cityList.find(c => c.id === route.cityId) ?? null;
+  const selectedCityId = selectedCity?.id ?? (cityList.length ? DEFAULT_ROUTE.cityId : route.cityId);
+  // Starts in parallel with the city list (the id is validated by the API).
+  const airQuality = useAirQuality(selectedCityId);
+  const airQualityMap = useAllCitiesAirQuality(cityList, mapReloadKey);
 
-  const [airQualityMap, setAirQualityMap] = useState<Record<string, AirQualityData | null>>({});
+  // Keep the URL hash in sync (shareable links, back/forward navigation).
+  useEffect(() => {
+    const hash = formatRoute({ section: activeSection, cityId: selectedCityId });
+    if (window.location.hash !== hash) window.history.replaceState(null, '', hash);
+  }, [activeSection, selectedCityId]);
 
   useEffect(() => {
-    if (airQuality && selectedCity) {
-      setAirQualityMap(prev => ({ ...prev, [selectedCity.id]: airQuality }));
-      lastUpdatedRef.current = new Date().toISOString();
-      setInitialLoading(false);
-    }
-    if (cities.length > 0 && selectedCity && !airQuality && !aqLoading) {
-      const timer = setTimeout(() => setInitialLoading(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [airQuality, cities, selectedCity, aqLoading]);
-
-  useEffect(() => {
-    if (cities.length === 0) return;
-    const fetchAll = async () => {
-      const results = await Promise.allSettled(
-        cities.map(c => getAirQuality(c.id).then(d => ({ id: c.id, data: d })))
-      );
-      const map: Record<string, AirQualityData | null> = {};
-      results.forEach(r => {
-        if (r.status === 'fulfilled') {
-          map[r.value.id] = r.value.data;
-        }
-      });
-      // Cities whose request failed are recorded as null (shown as "no estimate").
-      cities.forEach(c => {
-        if (!(c.id in map)) map[c.id] = null;
-      });
-      setAirQualityMap(prev => ({ ...prev, ...map }));
-    };
-    fetchAll();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cities.length > 0]);
-
-  const handleRefresh = useCallback(() => {
-    refreshAQ();
-    lastUpdatedRef.current = new Date().toISOString();
-  }, [refreshAQ]);
-
-  const handleCitySelect = useCallback((id: string) => {
-    setSelectedCityId(id);
+    const onHashChange = () => setRoute(parseRoute(window.location.hash, NAV_SECTION_IDS, DEFAULT_ROUTE));
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
+
+  // Move focus to the content when the view changes, for keyboard and screen-reader users.
+  useEffect(() => {
+    if (firstRender.current) { firstRender.current = false; return; }
+    mainRef.current?.scrollTo({ top: 0 });
+    mainRef.current?.focus({ preventScroll: true });
+  }, [activeSection]);
 
   const handleNavigate = useCallback((section: NavSection) => {
-    setActiveSection(section);
-    setShowBoot(false);
-    if (window.innerWidth < 768) setSidebarOpen(false);
+    setRoute(r => ({ ...r, section }));
+    setSidebarOpen(false);
   }, []);
 
+  const handleCitySelect = useCallback((cityId: string) => {
+    setRoute(r => ({ ...r, cityId }));
+  }, []);
 
-  const isDemo = Object.values(airQualityMap).some(d => d?.provenance.mode === 'demo');
+  const handleRefresh = useCallback(() => {
+    airQuality.reload();
+    setMapReloadKey(k => k + 1);
+  }, [airQuality.reload]);
 
-  // InitGate → BootSequence → dashboard
+  const isDemo = Object.values(airQualityMap).some(d => d?.provenance.mode === 'demo')
+    || airQuality.data?.provenance.mode === 'demo';
+
   if (showInitGate) {
     return <InitGate onTap={() => { setShowInitGate(false); setShowBoot(true); }} />;
   }
-
   if (showBoot) {
-    return (
-      <BootSequence
-        onComplete={() => {
-          setShowBoot(false);
-        }}
-      />
-    );
-  }
-
-
-  if (initialLoading && !airQuality && cities.length === 0) {
-    return <InitialLoadingSkeleton />;
+    return <BootSequence onComplete={() => setShowBoot(false)} />;
   }
 
   const renderSection = () => {
-    const section = (() => {
-      switch (activeSection) {
-        case 'dashboard': return <LiveMonitoring key="dashboard" city={selectedCity} airQuality={airQuality} loading={aqLoading} error={aqError} />;
-        case 'sources': return <SourceAttribution key="sources" cityId={selectedCityId} />;
-        case 'forecast': return <PredictiveIntelligence key="forecast" cityId={selectedCityId} />;
-        case 'simulator': return <PolicySimulator key="simulator" cityId={selectedCityId} />;
-        case 'enforcement': return <EnforcementIntelligence key="enforcement" cities={cities} airQualityMap={airQualityMap} />;
-        case 'comparative': return <ComparativeIntelligence key="comparative" cities={cities} airQualityMap={airQualityMap} />;
-        case 'brief': return <ExecutiveBrief key="brief" cityId={selectedCityId} />;
-        case 'advisory': return <CitizenAdvisory key="advisory" cityId={selectedCityId} />;
-        default: return <LiveMonitoring key="dashboard" city={selectedCity} airQuality={airQuality} loading={aqLoading} error={aqError} />;
-      }
-    })();
-    return <Suspense fallback={<ModuleFallback />}>{section}</Suspense>;
+    if (!selectedCity) return null;
+    switch (activeSection) {
+      case 'forecast': return <PredictiveIntelligence cityId={selectedCityId} />;
+      case 'sources': return <SourceAttribution city={selectedCity} />;
+      case 'simulator': return <PolicySimulator city={selectedCity} />;
+      case 'comparative': return <ComparativeIntelligence cities={cityList} airQualityMap={airQualityMap} selectedId={selectedCityId} onSelectCity={handleCitySelect} />;
+      case 'brief': return <ExecutiveBrief city={selectedCity} />;
+      case 'advisory': return <CitizenAdvisory city={selectedCity} />;
+      case 'method': return <MethodPage />;
+      case 'dashboard':
+      default:
+        return (
+          <LiveMonitoring
+            city={selectedCity}
+            resource={airQuality}
+            cities={cityList}
+            airQualityMap={airQualityMap}
+            onSelectCity={handleCitySelect}
+          />
+        );
+    }
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
-      <AmbientBackground variant="dashboard" />
+    <ThemeContext.Provider value={theme}>
+      <div className="print-root flex h-screen bg-slate-50">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium"
+        >
+          Skip to main content
+        </a>
 
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-brand-600 focus:text-white focus:rounded-lg focus:text-sm focus:font-medium"
-      >
-        Skip to main content
-      </a>
+        <Sidebar activeSection={activeSection} onSectionChange={handleNavigate} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <Sidebar activeSection={activeSection} onSectionChange={handleNavigate} isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-
-      <div className="flex-1 flex flex-col min-w-0 relative z-10">
-        <div className="bg-white px-4 md:px-6 py-3 flex items-center gap-3 border-b border-slate-200">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="md:hidden p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-            aria-label="Open navigation menu"
-          >
-            <Menu size={20} />
-          </button>
+        <div className="flex-1 flex flex-col min-w-0">
           <Header
-            city={selectedCity}
-            airQuality={airQuality}
-            loading={aqLoading}
+            cities={cityList}
+            selectedCityId={selectedCityId}
+            onSelectCity={handleCitySelect}
+            airQuality={airQuality.data}
+            loading={airQuality.loading}
             onRefresh={handleRefresh}
-            lastUpdated={lastUpdatedRef.current}
             theme={theme}
             onToggleTheme={toggleTheme}
+            onOpenMenu={() => setSidebarOpen(true)}
             onStartIntro={() => setShowInitGate(true)}
           />
-        </div>
 
-        <main id="main-content" className="flex-1 overflow-auto relative">
-          {isDemo && (
-            <div className="bg-amber-100 border-b border-amber-300 px-4 md:px-6 py-2 text-xs text-amber-900 flex items-center gap-2" role="status">
-              <AlertTriangle size={14} className="shrink-0" />
-              <span><strong>DEMO DATA</strong> — the server is running with DATA_MODE=demo. Values are illustrative fixtures, not measurements or model output.</span>
+          <main id="main-content" ref={mainRef} tabIndex={-1} className="flex-1 overflow-auto focus:outline-none">
+            {isDemo && (
+              <div className="bg-amber-100 border-b border-amber-300 px-4 md:px-6 py-2 text-xs text-amber-900 flex items-center gap-2" role="status">
+                <AlertTriangle size={14} className="shrink-0" aria-hidden="true" />
+                <span><strong>DEMO DATA</strong> — the server is running with DATA_MODE=demo. Values are illustrative fixtures, not measurements or model output.</span>
+              </div>
+            )}
+            <div className="mx-auto max-w-7xl px-4 md:px-6 py-5">
+              {cities.error && !cities.data ? (
+                <ErrorPanel title="The city list could not be loaded" message={cities.error} onRetry={cities.reload} />
+              ) : cities.loading && !cities.data ? (
+                <ModuleFallback />
+              ) : (
+                <Suspense fallback={<ModuleFallback />}>{renderSection()}</Suspense>
+              )}
             </div>
-          )}
-          <div className="px-4 md:px-6 py-4 border-b border-slate-100 bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <CitySelector cities={cities} selectedId={selectedCityId} onSelect={setSelectedCityId} />
-            </div>
-            <IndiaMap
-              cities={cities}
-              selectedId={selectedCityId}
-              airQualityMap={airQualityMap}
-              onSelect={handleCitySelect}
-            />
-            <ImpactSection onNavigate={handleNavigate} />
-          </div>
-          <div className="px-4 md:px-6 pb-8 animate-fade-in">
-            {renderSection()}
-          </div>
-        </main>
-      </div>
-    </div>
-  );
-}
-
-function InitialLoadingSkeleton() {
-  return (
-    <div className="flex h-screen bg-slate-50">
-      <div className="hidden md:flex w-56 bg-white border-r border-slate-200 flex-col">
-        <div className="px-5 py-5 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="skeleton w-8 h-8 rounded-lg" />
-            <div>
-              <div className="skeleton w-28 h-4 mb-1" />
-              <div className="skeleton w-20 h-3" />
-            </div>
-          </div>
-        </div>
-        <div className="px-3 py-4 space-y-1">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="skeleton w-full h-10 rounded-lg" style={{ animationDelay: `${i * 50}ms` }} />
-          ))}
+          </main>
         </div>
       </div>
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="bg-white px-6 py-3 flex items-center gap-3">
-          <div className="skeleton w-8 h-8 rounded-lg md:hidden" />
-          <div className="flex-1 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div>
-                <div className="skeleton w-32 h-5 mb-1" />
-                <div className="skeleton w-48 h-3" />
-              </div>
-              <div className="skeleton w-px h-8" />
-              <div>
-                <div className="skeleton w-16 h-7 mb-1" />
-                <div className="skeleton w-8 h-3" />
-              </div>
-            </div>
-            <div className="skeleton w-20 h-8 rounded-lg" />
-          </div>
-        </div>
-        <main className="flex-1 overflow-auto">
-          <div className="px-4 md:px-6 py-4 border-b border-slate-100 bg-white">
-            <div className="skeleton w-40 h-5" />
-          </div>
-          <div className="px-4 md:px-6 pb-8 pt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 p-6 flex flex-col items-center justify-center h-80">
-                <div className="skeleton w-32 h-8 rounded-full mb-4" />
-                <div className="skeleton w-32 h-32 rounded-full" />
-                <div className="skeleton w-24 h-4 mt-4" />
-              </div>
-              <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-slate-200 p-4" style={{ animationDelay: `${i * 60}ms` }}>
-                    <div className="skeleton w-14 h-3 mb-3" />
-                    <div className="skeleton w-10 h-6 mb-2" />
-                    <div className="skeleton w-16 h-3" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
+    </ThemeContext.Provider>
   );
 }

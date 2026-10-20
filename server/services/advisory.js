@@ -96,6 +96,7 @@ export function buildAdvisory(ctx, lang = 'en') {
 
   return {
     cityId: ctx.city.id,
+    referenceTime: ctx.referenceTime,
     status: naqi.status,
     reasons: naqi.reasons,
     aqi: naqi.value,
@@ -107,7 +108,10 @@ export function buildAdvisory(ctx, lang = 'en') {
     healthStatementSource: 'CPCB National Air Quality Index (CUPS/82/2014-15), Table 3.12',
     healthAdvisory: category ? GUIDANCE.en[category] : INSUFFICIENT_MESSAGE,
     lang,
-    message: category ? GUIDANCE[lang][category] : (lang === 'en' ? INSUFFICIENT_MESSAGE : null),
+    // No translation exists for the insufficient-data message, so it falls back
+    // to English and says so via messageLang rather than returning nothing.
+    message: category ? GUIDANCE[lang][category] : INSUFFICIENT_MESSAGE,
+    messageLang: category ? lang : 'en',
     precautions: category ? PRECAUTIONS[category] : [],
     sensitiveGroups: category ? SENSITIVE_GROUPS[category] : [],
     multilingual,

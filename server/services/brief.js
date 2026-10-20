@@ -61,12 +61,12 @@ function weatherContext(weather) {
   return notes.length ? notes : ['No meteorological flags computed.'];
 }
 
-export function generateBrief(ctx, interventionIds = []) {
+export function generateBrief(ctx, interventionIds = [], assumptions = {}) {
   const { city } = ctx;
   const naqi = describeNaqi(ctx);
   const forecast = buildForecast(ctx);
   const sources = buildSourceContext(ctx);
-  const scenario = interventionIds.length ? runScenario(ctx, interventionIds) : null;
+  const scenario = interventionIds.length ? runScenario(ctx, interventionIds, assumptions) : null;
   const tz = city.timezone;
   const display = displayIndex(naqi.value, naqi.isLowerBound);
   const dominant = naqi.dominantPollutants.map(p => POLLUTANT_LABELS[p] || p);

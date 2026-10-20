@@ -37,9 +37,10 @@ export default {
           800: '#1e293b', 900: '#0f172a', 950: '#020617',
         },
       },
+      // System font stacks: no web-font download on the critical path.
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', '"Noto Sans"', 'sans-serif'],
+        mono: ['ui-monospace', '"Cascadia Mono"', '"SF Mono"', 'Menlo', 'Consolas', 'monospace'],
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',
