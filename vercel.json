@@ -5,6 +5,11 @@
   "outputDirectory": "dist",
   "installCommand": "npm ci",
   "devCommand": "npm run dev",
+  "git": {
+    "deploymentEnabled": {
+      "forecast-archive": false
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }

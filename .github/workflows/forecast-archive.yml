@@ -1,0 +1,100 @@
+# Prospective forecast archive — see docs/methodology/forecast-archive.md.
+#
+# Runs from the default branch (GitHub only schedules workflows there) and
+# writes ONLY to the `forecast-archive` branch, which holds no application
+# code. Each run adds a new directory; nothing is overwritten. Partial runs are
+# committed (failures are part of the record) and then fail the job so they
+# are visible. Scheduled runs can start late or be skipped by GitHub; the
+# manifests and index.csv make such gaps detectable.
+
+name: Forecast archive
+
+on:
+  schedule:
+    - cron: '30 1 * * *'   # after the 00 UTC CAMS run
+    - cron: '30 13 * * *'  # after the 12 UTC CAMS run
+  workflow_dispatch:
+
+# Least privilege: the only permission is pushing commits (to forecast-archive).
+# GITHUB_TOKEN cannot be scoped to one branch, so protect `main` with a branch
+# protection rule; nothing in this workflow writes to it.
+permissions:
+  contents: write
+
+concurrency:
+  group: forecast-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ARCHIVE_BRANCH: forecast-archive
+      ARCHIVE_BASE_URL: https://urban-breathe-nine.vercel.app
+      ARCHIVE_CRON: ${{ github.event.schedule }}
+    steps:
+      # Actions are pinned to full commit SHAs (tag in the comment).
+      - name: Check out archiver (default branch)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          path: app
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Check out or create the archive branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git init -q archive
+          cd archive
+          # The token goes in an auth header held in this throw-away repo's
+          # local config, never in the remote URL; its base64 form is masked
+          # so it cannot appear in logs (same approach as actions/checkout).
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          git config http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$ARCHIVE_BRANCH" >/dev/null; then
+            git fetch -q --depth=1 origin "$ARCHIVE_BRANCH"
+            git checkout -q -b "$ARCHIVE_BRANCH" FETCH_HEAD
+          else
+            git checkout -q --orphan "$ARCHIVE_BRANCH"
+            cp ../app/docs/methodology/forecast-archive.md README.md
+            # This branch holds data only: never build it on Vercel.
+            printf '{\n  "git": { "deploymentEnabled": false }\n}\n' > vercel.json
+            git add README.md vercel.json
+            git commit -q -m "archive: initialise forecast-archive branch"
+          fi
+
+      - name: Archive forecasts
+        id: archive
+        run: node app/scripts/archive-forecasts.mjs --out archive
+
+      - name: Commit and push the run
+        if: always() && steps.archive.outputs.run_dir != ''
+        run: |
+          set -euo pipefail
+          cd archive
+          git add runs index.csv
+          git commit -q -m "archive: ${{ steps.archive.outputs.run_dir }} (complete=${{ steps.archive.outputs.complete }})"
+          for attempt in 1 2 3; do
+            if git push -q origin "HEAD:$ARCHIVE_BRANCH"; then exit 0; fi
+            echo "push rejected (attempt $attempt); rebasing on the latest archive"
+            git fetch -q --depth=1 origin "$ARCHIVE_BRANCH"
+            git rebase -q FETCH_HEAD
+          done
+          echo "::error::could not push archive run after 3 attempts"
+          exit 1
+
+      - name: Fail the job if the run was incomplete
+        if: steps.archive.outputs.complete != 'true'
+        run: |
+          echo "::error::archive run ${{ steps.archive.outputs.run_dir }} is incomplete (see its manifest.json)"
+          exit 1
