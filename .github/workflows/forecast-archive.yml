@@ -15,6 +15,9 @@ on:
     - cron: '30 13 * * *'  # after the 12 UTC CAMS run
   workflow_dispatch:
 
+# Least privilege: the only permission is pushing commits (to forecast-archive).
+# GITHUB_TOKEN cannot be scoped to one branch, so protect `main` with a branch
+# protection rule; nothing in this workflow writes to it.
 permissions:
   contents: write
 
@@ -31,13 +34,14 @@ jobs:
       ARCHIVE_BASE_URL: https://urban-breathe-nine.vercel.app
       ARCHIVE_CRON: ${{ github.event.schedule }}
     steps:
+      # Actions are pinned to full commit SHAs (tag in the comment).
       - name: Check out archiver (default branch)
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           path: app
           persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
 
@@ -48,7 +52,13 @@ jobs:
           set -euo pipefail
           git init -q archive
           cd archive
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # The token goes in an auth header held in this throw-away repo's
+          # local config, never in the remote URL; its base64 form is masked
+          # so it cannot appear in logs (same approach as actions/checkout).
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          git config http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git ls-remote --exit-code --heads origin "$ARCHIVE_BRANCH" >/dev/null; then
