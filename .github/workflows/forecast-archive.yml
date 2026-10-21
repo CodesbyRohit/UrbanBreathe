@@ -31,6 +31,10 @@ jobs:
     timeout-minutes: 15
     env:
       ARCHIVE_BRANCH: forecast-archive
+      # Always use the fully-qualified ref with the remote: a bare name is a
+      # suffix pattern to ls-remote, so `forecast-archive` also matches e.g.
+      # `refs/heads/feat/forecast-archive`.
+      ARCHIVE_REF: refs/heads/forecast-archive
       ARCHIVE_BASE_URL: https://urban-breathe-nine.vercel.app
       ARCHIVE_CRON: ${{ github.event.schedule }}
     steps:
@@ -61,9 +65,16 @@ jobs:
           git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git ls-remote --exit-code --heads origin "$ARCHIVE_BRANCH" >/dev/null; then
-            git fetch -q --depth=1 origin "$ARCHIVE_BRANCH"
+          # Exit 2 means the ref does not exist; anything else non-zero is an
+          # error and must not be mistaken for "absent" (that would start a
+          # second, unrelated archive history).
+          rc=0; git ls-remote --exit-code origin "$ARCHIVE_REF" >/dev/null || rc=$?
+          if [ "$rc" -eq 0 ]; then
+            git fetch -q --depth=1 origin "$ARCHIVE_REF"
             git checkout -q -b "$ARCHIVE_BRANCH" FETCH_HEAD
+          elif [ "$rc" -ne 2 ]; then
+            echo "::error::git ls-remote failed (exit $rc)"
+            exit "$rc"
           else
             git checkout -q --orphan "$ARCHIVE_BRANCH"
             cp ../app/docs/methodology/forecast-archive.md README.md
@@ -85,9 +96,9 @@ jobs:
           git add runs index.csv
           git commit -q -m "archive: ${{ steps.archive.outputs.run_dir }} (complete=${{ steps.archive.outputs.complete }})"
           for attempt in 1 2 3; do
-            if git push -q origin "HEAD:$ARCHIVE_BRANCH"; then exit 0; fi
+            if git push -q origin "HEAD:$ARCHIVE_REF"; then exit 0; fi
             echo "push rejected (attempt $attempt); rebasing on the latest archive"
-            git fetch -q --depth=1 origin "$ARCHIVE_BRANCH"
+            git fetch -q --depth=1 origin "$ARCHIVE_REF"
             git rebase -q FETCH_HEAD
           done
           echo "::error::could not push archive run after 3 attempts"
